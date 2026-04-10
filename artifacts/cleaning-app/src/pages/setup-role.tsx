@@ -2,13 +2,12 @@ import { useSetUserRole } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { User, Briefcase, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useState } from "react";
 
 export default function SetupRolePage() {
   const setUserRole = useSetUserRole();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState<"boss" | "employee" | null>(null);
 
   const handleSelectRole = async (role: "boss" | "employee") => {
@@ -20,10 +19,8 @@ export default function SetupRolePage() {
       sessionStorage.setItem("roleChosen", "true");
       setLocation("/profile");
     } catch (err) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to set role. Please try again.",
-        variant: "destructive"
       });
       setIsLoading(null);
     }

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function HousesPage() {
   const { data: houses, isLoading } = useListHouses();
@@ -182,7 +182,6 @@ function HouseDetailModal({ houseId, onClose }: { houseId: number, onClose: () =
   });
   const updateNotes = useUpdateHouseNotes();
   const qc = useQueryClient();
-  const { toast } = useToast();
 
   const [notesValue, setNotesValue] = useState("");
 
@@ -198,13 +197,13 @@ function HouseDetailModal({ houseId, onClose }: { houseId: number, onClose: () =
       data: { notes: notesValue }
     }, {
       onSuccess: () => {
-        toast({ title: "Notes saved successfully" });
+        toast.success("Notes saved successfully");
         qc.setQueryData(getGetHouseQueryKey(houseId), (old: any) => 
           old ? { ...old, notes: notesValue } : old
         );
       },
       onError: () => {
-        toast({ title: "Failed to save notes", variant: "destructive" });
+        toast.error("Failed to save notes");
       }
     });
   };

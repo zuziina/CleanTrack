@@ -7,12 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { User, Briefcase, Loader2, ArrowLeft } from "lucide-react";
 import { useSetUserRole } from "@workspace/api-client-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function SignUpPage() {
   const { signUp, setActive, isLoaded } = useSignUp();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const setUserRole = useSetUserRole();
   
   const [role, setRole] = useState<"boss" | "employee" | null>(null);
@@ -44,17 +43,13 @@ export default function SignUpPage() {
         sessionStorage.setItem("roleChosen", "true");
         setLocation("/profile");
       } else {
-        toast({
-          title: "Registration incomplete",
+        toast.error("Registration incomplete", {
           description: "Please check your details and try again.",
-          variant: "destructive",
         });
       }
     } catch (err: any) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: err.errors?.[0]?.message || err.message || "Failed to create account",
-        variant: "destructive",
       });
     } finally {
       setIsLoading(false);

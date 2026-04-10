@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
   const { data: user, isLoading: userLoading } = useGetMe();
@@ -273,7 +273,6 @@ function AssignModal({ user, onClose }: { user: any, onClose: () => void }) {
   const { data: houses, isLoading: housesLoading } = useListHouses();
   const createAssignment = useCreateAssignment();
   const qc = useQueryClient();
-  const { toast } = useToast();
 
   const [houseId, setHouseId] = useState<string>("");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -299,12 +298,12 @@ function AssignModal({ user, onClose }: { user: any, onClose: () => void }) {
       }
     }, {
       onSuccess: () => {
-        toast({ title: "Assignment created" });
+        toast.success("Assignment created");
         qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
         onClose();
       },
       onError: () => {
-        toast({ title: "Failed to create assignment", variant: "destructive" });
+        toast.error("Failed to create assignment");
       }
     });
   };

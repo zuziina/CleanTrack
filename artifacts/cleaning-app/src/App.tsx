@@ -3,7 +3,7 @@ import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wo
 import { useEffect, useRef } from 'react';
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import Home from "@/pages/home";
