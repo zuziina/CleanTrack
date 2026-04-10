@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Cleaning Company App"
+version = "1.0.0"
+id = "artifacts/cleaning-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20047
+
+[services.development]
+run = "pnpm --filter @workspace/cleaning-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cleaning-app", "run", "build" ]
+publicDir = "artifacts/cleaning-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20047"
+BASE_PATH = "/"
