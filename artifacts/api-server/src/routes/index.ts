@@ -1,13 +1,13 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import profileRouter from "./profile";
+import usersRouter from "./users";
 import housesRouter from "./houses";
 import assignmentsRouter from "./assignments";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use("/profile", profileRouter);
+router.use("/users", usersRouter);
 router.use("/houses", housesRouter);
 router.use("/assignments", assignmentsRouter);
 

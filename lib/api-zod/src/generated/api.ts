@@ -15,51 +15,60 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary Get current user profile
+ * @summary List all employees (boss only)
  */
-export const GetProfileResponse = zod.object({
-  id: zod.number(),
-  name: zod.string(),
+export const ListUsersResponseItem = zod.object({
+  clerkId: zod.string(),
+  username: zod.string(),
   email: zod.string(),
-  phone: zod.string(),
-  role: zod.string(),
-  avatarUrl: zod.string().nullish(),
-  companyName: zod.string(),
-  startDate: zod.string(),
+  role: zod.enum(["boss", "employee"]),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+});
+export const ListUsersResponse = zod.array(ListUsersResponseItem);
+
+/**
+ * @summary Get current user info (role, username)
+ */
+export const GetMeResponse = zod.object({
+  clerkId: zod.string(),
+  username: zod.string(),
+  email: zod.string(),
+  role: zod.enum(["boss", "employee"]),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
 });
 
 /**
- * @summary Update user profile
+ * @summary Set role for current user (called on sign-up)
  */
-export const UpdateProfileBody = zod.object({
-  name: zod.string().optional(),
-  email: zod.string().optional(),
-  phone: zod.string().optional(),
-  avatarUrl: zod.string().nullish(),
+export const SetUserRoleBody = zod.object({
+  role: zod.enum(["boss", "employee"]),
 });
 
-export const UpdateProfileResponse = zod.object({
-  id: zod.number(),
-  name: zod.string(),
+export const SetUserRoleResponse = zod.object({
+  clerkId: zod.string(),
+  username: zod.string(),
   email: zod.string(),
-  phone: zod.string(),
-  role: zod.string(),
-  avatarUrl: zod.string().nullish(),
-  companyName: zod.string(),
-  startDate: zod.string(),
+  role: zod.enum(["boss", "employee"]),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
 });
 
 /**
- * @summary List all daily assignments
+ * @summary List assignments (employees see their own, boss sees all)
  */
 export const ListAssignmentsResponseItem = zod.object({
   id: zod.number(),
   houseId: zod.number(),
   houseName: zod.string(),
   houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
   date: zod.string(),
   timeSlot: zod.string(),
   notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
   createdAt: zod.string(),
@@ -71,9 +80,11 @@ export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem);
  */
 export const CreateAssignmentBody = zod.object({
   houseId: zod.number(),
+  assignedToClerkId: zod.string().nullish(),
   date: zod.string(),
   timeSlot: zod.string(),
   notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
 });
@@ -90,9 +101,12 @@ export const GetAssignmentResponse = zod.object({
   houseId: zod.number(),
   houseName: zod.string(),
   houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
   date: zod.string(),
   timeSlot: zod.string(),
   notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
   createdAt: zod.string(),
@@ -106,9 +120,11 @@ export const UpdateAssignmentParams = zod.object({
 });
 
 export const UpdateAssignmentBody = zod.object({
+  assignedToClerkId: zod.string().nullish(),
   date: zod.string().optional(),
   timeSlot: zod.string().optional(),
   notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]).optional(),
   priority: zod.enum(["low", "normal", "high"]).optional(),
 });
@@ -118,9 +134,12 @@ export const UpdateAssignmentResponse = zod.object({
   houseId: zod.number(),
   houseName: zod.string(),
   houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
   date: zod.string(),
   timeSlot: zod.string(),
   notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
   createdAt: zod.string(),
@@ -134,16 +153,19 @@ export const DeleteAssignmentParams = zod.object({
 });
 
 /**
- * @summary Get today's assignments
+ * @summary Get today's assignments for the current user (employees) or all (boss)
  */
 export const GetTodayAssignmentsResponseItem = zod.object({
   id: zod.number(),
   houseId: zod.number(),
   houseName: zod.string(),
   houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
   date: zod.string(),
   timeSlot: zod.string(),
   notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
   createdAt: zod.string(),
@@ -279,6 +301,38 @@ export const UpdateHouseResponse = zod.object({
  */
 export const DeleteHouseParams = zod.object({
   id: zod.coerce.number(),
+});
+
+/**
+ * @summary Update notes for a house (editable by anyone)
+ */
+export const UpdateHouseNotesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateHouseNotesBody = zod.object({
+  notes: zod.string().nullable(),
+});
+
+export const UpdateHouseNotesResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  address: zod.string(),
+  city: zod.string(),
+  state: zod.string(),
+  zipCode: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  ownerName: zod.string(),
+  ownerPhone: zod.string().nullish(),
+  ownerEmail: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  cleaningFrequency: zod.enum(["weekly", "biweekly", "monthly"]),
+  size: zod.string().nullish(),
+  bedrooms: zod.number().nullish(),
+  bathrooms: zod.number().nullish(),
+  status: zod.enum(["active", "inactive"]),
+  createdAt: zod.string(),
 });
 
 /**

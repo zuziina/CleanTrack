@@ -16,37 +16,53 @@ pnpm workspace monorepo using TypeScript. Cleaning company employee app called "
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 - **Frontend**: React + Vite + TailwindCSS + shadcn/ui
+- **Auth**: Clerk (email/password, boss/employee roles stored in publicMetadata)
 - **Map**: Leaflet + react-leaflet
 
 ## App: CleanTrack
 
-A cleaning company employee app with three main sections:
-1. **Profile** (`/profile`) — Employee personal info + today's job assignments from the boss
-2. **Houses** (`/houses`) — All company properties with details, search, and filter
-3. **Map** (`/map`) — Interactive map showing all house locations with clickable pins
+A cleaning company employee app with authentication and two user roles.
+
+### Auth Flow
+- Landing page (/) — shows Sign In / Create Account for unauthenticated users
+- Sign-up (/sign-up) — custom 2-step: 1) pick role (Boss/Employee), 2) username + email + password
+- Sign-in (/sign-in) — Clerk built-in (email/password + Google)
+- After sign-up: calls POST /api/users/set-role to store role in Clerk publicMetadata
+
+### Employee View
+- Profile: username, "Employee" badge, email, today's assignments with house name, time slot, guest count
+- Houses: searchable property grid, click for detail modal with editable notes
+- Map: interactive map with house pins
+
+### Boss View  
+- Profile: username, "Boss" badge, full employee list, click employee to assign houses for the day (house, date, time slot, guest count)
+- Also sees all today's assignments in a dashboard
+- Houses: same as employee + editable notes
+- Map: same as employee
 
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 ## Database Schema
 
-- `profile` table — single row for the current user's profile info
-- `houses` table — all company properties with coordinates for map
-- `assignments` table — cleaning job assignments tied to houses
+- `houses` — all company properties with coordinates
+- `assignments` — cleaning jobs: houseId, assignedToClerkId, date, timeSlot, guestCount, status, priority, notes
+- (No profile table — user data stored in Clerk)
 
 ## API Routes
 
-- `GET/PUT /api/profile` — user profile
-- `GET /api/assignments` — all assignments
+- `GET /api/users` — list all users (boss only)
+- `GET /api/users/me` — current user info from Clerk
+- `POST /api/users/set-role` — set role (boss/employee) on first sign-up
+- `GET/POST /api/assignments` — assignments (employees see only theirs)
 - `GET /api/assignments/today` — today's assignments
-- `POST/PUT/DELETE /api/assignments/:id` — CRUD for assignments
-- `GET /api/houses/stats` — house statistics summary
-- `GET /api/houses` — all houses
-- `POST/PUT/DELETE /api/houses/:id` — CRUD for houses
-
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+- `PUT/DELETE /api/assignments/:id` — update/delete
+- `GET /api/houses/stats` — stats summary
+- `GET/POST /api/houses` — all houses
+- `GET/PUT/DELETE /api/houses/:id` — single house
+- `PATCH /api/houses/:id/notes` — update notes (anyone can edit)

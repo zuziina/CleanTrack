@@ -6,9 +6,11 @@ import { housesTable } from "./houses";
 export const assignmentsTable = pgTable("assignments", {
   id: serial("id").primaryKey(),
   houseId: integer("house_id").notNull().references(() => housesTable.id),
+  assignedToClerkId: text("assigned_to_clerk_id"),
   date: text("date").notNull(),
   timeSlot: text("time_slot").notNull(),
   notes: text("notes"),
+  guestCount: integer("guest_count"),
   status: text("status").notNull().default("pending"),
   priority: text("priority").notNull().default("normal"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

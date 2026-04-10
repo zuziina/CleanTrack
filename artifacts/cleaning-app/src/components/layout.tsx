@@ -1,9 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { User, Home, Map as MapIcon, ClipboardList } from "lucide-react";
+import { User, Home, Map as MapIcon, ClipboardList, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useClerk } from "@clerk/react";
+import { Button } from "./ui/button";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { signOut } = useClerk();
 
   const navItems = [
     { href: "/profile", icon: User, label: "Profile" },
@@ -34,18 +37,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+        <div className="p-4 border-t border-border">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => signOut()}>
+            <LogOut size={20} className="mr-3" />
+            Sign Out
+          </Button>
+        </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden pb-16 md:pb-0">
         {/* Mobile Header */}
-        <header className="md:hidden border-b border-border bg-card p-4 flex items-center justify-center">
+        <header className="md:hidden border-b border-border bg-card p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
               <ClipboardList size={20} />
             </div>
             <span className="font-bold text-lg tracking-tight text-foreground">CleanTrack</span>
           </div>
+          <Button variant="ghost" size="icon" onClick={() => signOut()}>
+            <LogOut size={20} />
+          </Button>
         </header>
 
         <div className="flex-1 overflow-y-auto">
@@ -54,7 +66,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Mobile Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card flex justify-around p-2 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card flex justify-around p-2 pb-safe z-50">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href} className={cn(
             "flex flex-col items-center gap-1 p-2 rounded-lg min-w-[4rem]",

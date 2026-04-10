@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./appUser";
+export * from "./appUserRole";
 export * from "./assignment";
 export * from "./assignmentPriority";
 export * from "./assignmentStatus";
@@ -20,11 +22,12 @@ export * from "./house";
 export * from "./houseCleaningFrequency";
 export * from "./houseStats";
 export * from "./houseStatus";
-export * from "./profile";
+export * from "./setRoleBody";
+export * from "./setRoleBodyRole";
 export * from "./updateAssignmentBody";
 export * from "./updateAssignmentBodyPriority";
 export * from "./updateAssignmentBodyStatus";
 export * from "./updateHouseBody";
 export * from "./updateHouseBodyCleaningFrequency";
 export * from "./updateHouseBodyStatus";
-export * from "./updateProfileBody";
+export * from "./updateHouseNotesBody";

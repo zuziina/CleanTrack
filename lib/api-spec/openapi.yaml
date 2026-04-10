@@ -10,8 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
-  - name: profile
-    description: User profile operations
+  - name: users
+    description: User management operations
   - name: houses
     description: House operations
   - name: assignments
@@ -30,41 +30,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  /profile:
+  /users:
     get:
-      operationId: getProfile
-      tags: [profile]
-      summary: Get current user profile
+      operationId: listUsers
+      tags: [users]
+      summary: List all employees (boss only)
       responses:
         "200":
-          description: User profile
+          description: List of users
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Profile"
-    put:
-      operationId: updateProfile
-      tags: [profile]
-      summary: Update user profile
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppUser"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user info (role, username)
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+
+  /users/set-role:
+    post:
+      operationId: setUserRole
+      tags: [users]
+      summary: Set role for current user (called on sign-up)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateProfileBody"
+              $ref: "#/components/schemas/SetRoleBody"
       responses:
         "200":
-          description: Updated profile
+          description: Updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Profile"
+                $ref: "#/components/schemas/AppUser"
 
   /assignments:
     get:
       operationId: listAssignments
       tags: [assignments]
-      summary: List all daily assignments
+      summary: List assignments (employees see their own, boss sees all)
       responses:
         "200":
           description: List of assignments
@@ -151,7 +168,7 @@ paths:
     get:
       operationId: getTodayAssignments
       tags: [assignments]
-      summary: Get today's assignments
+      summary: Get today's assignments for the current user (employees) or all (boss)
       responses:
         "200":
           description: Today's assignments
@@ -249,6 +266,31 @@ paths:
         "204":
           description: Deleted
 
+  /houses/{id}/notes:
+    patch:
+      operationId: updateHouseNotes
+      tags: [houses]
+      summary: Update notes for a house (editable by anyone)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHouseNotesBody"
+      responses:
+        "200":
+          description: Updated house
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/House"
+
   /houses/stats:
     get:
       operationId: getHouseStats
@@ -272,47 +314,38 @@ components:
       required:
         - status
 
-    Profile:
+    AppUser:
       type: object
       properties:
-        id:
-          type: integer
-        name:
+        clerkId:
+          type: string
+        username:
           type: string
         email:
-          type: string
-        phone:
           type: string
         role:
           type: string
-        avatarUrl:
+          enum: [boss, employee]
+        firstName:
           type: string
           nullable: true
-        companyName:
+        lastName:
           type: string
-        startDate:
-          type: string
+          nullable: true
       required:
-        - id
-        - name
+        - clerkId
+        - username
         - email
-        - phone
         - role
-        - companyName
-        - startDate
 
-    UpdateProfileBody:
+    SetRoleBody:
       type: object
       properties:
-        name:
+        role:
           type: string
-        email:
-          type: string
-        phone:
-          type: string
-        avatarUrl:
-          type: string
-          nullable: true
+          enum: [boss, employee]
+      required:
+        - role
 
     Assignment:
       type: object
@@ -325,12 +358,21 @@ components:
           type: string
         houseAddress:
           type: string
+        assignedToClerkId:
+          type: string
+          nullable: true
+        assignedToUsername:
+          type: string
+          nullable: true
         date:
           type: string
         timeSlot:
           type: string
         notes:
           type: string
+          nullable: true
+        guestCount:
+          type: integer
           nullable: true
         status:
           type: string
@@ -356,12 +398,18 @@ components:
       properties:
         houseId:
           type: integer
+        assignedToClerkId:
+          type: string
+          nullable: true
         date:
           type: string
         timeSlot:
           type: string
         notes:
           type: string
+          nullable: true
+        guestCount:
+          type: integer
           nullable: true
         status:
           type: string
@@ -379,12 +427,18 @@ components:
     UpdateAssignmentBody:
       type: object
       properties:
+        assignedToClerkId:
+          type: string
+          nullable: true
         date:
           type: string
         timeSlot:
           type: string
         notes:
           type: string
+          nullable: true
+        guestCount:
+          type: integer
           nullable: true
         status:
           type: string
@@ -561,6 +615,15 @@ components:
         status:
           type: string
           enum: [active, inactive]
+
+    UpdateHouseNotesBody:
+      type: object
+      properties:
+        notes:
+          type: string
+          nullable: true
+      required:
+        - notes
 
     HouseStats:
       type: object

@@ -13,9 +13,12 @@ export interface Assignment {
   houseId: number;
   houseName: string;
   houseAddress: string;
+  assignedToClerkId?: string | null;
+  assignedToUsername?: string | null;
   date: string;
   timeSlot: string;
   notes?: string | null;
+  guestCount?: number | null;
   status: AssignmentStatus;
   priority: AssignmentPriority;
   createdAt: string;

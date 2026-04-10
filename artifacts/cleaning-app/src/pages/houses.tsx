@@ -1,14 +1,17 @@
 import { Layout } from "@/components/layout";
-import { useListHouses, useGetHouseStats, useGetHouse, getGetHouseQueryKey } from "@workspace/api-client-react";
+import { useListHouses, useGetHouseStats, useGetHouse, getGetHouseQueryKey, useUpdateHouseNotes } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, MapPin, BedDouble, Bath, ArrowUpRight, Activity, CalendarDays, Filter } from "lucide-react";
-import { useState } from "react";
+import { Search, MapPin, BedDouble, Bath, Activity, CalendarDays } from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function HousesPage() {
   const { data: houses, isLoading } = useListHouses();
@@ -110,7 +113,7 @@ export default function HousesPage() {
         ) : filteredHouses?.length === 0 ? (
           <div className="text-center py-20 bg-card rounded-xl border border-dashed">
             <div className="bg-secondary w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Home className="text-muted-foreground" />
+              <Activity className="text-muted-foreground" />
             </div>
             <h3 className="text-lg font-medium text-foreground">No properties found</h3>
             <p className="text-muted-foreground">Try adjusting your search or filters.</p>
@@ -126,12 +129,12 @@ export default function HousesPage() {
                 <CardContent className="p-0">
                   <div className="p-5 space-y-4">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">{house.name}</h3>
+                      <div className="space-y-1 pr-2">
+                        <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors truncate">{house.name}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-1">{house.ownerName}</p>
                       </div>
                       <Badge variant="outline" className={cn(
-                        "capitalize",
+                        "capitalize shrink-0",
                         house.status === "active" ? "text-green-600 bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900" : "text-muted-foreground bg-muted"
                       )}>
                         {house.status}
@@ -177,6 +180,34 @@ function HouseDetailModal({ houseId, onClose }: { houseId: number, onClose: () =
   const { data: house, isLoading } = useGetHouse(houseId, {
     query: { enabled: !!houseId, queryKey: getGetHouseQueryKey(houseId) }
   });
+  const updateNotes = useUpdateHouseNotes();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  const [notesValue, setNotesValue] = useState("");
+
+  useEffect(() => {
+    if (house?.notes) {
+      setNotesValue(house.notes);
+    }
+  }, [house?.notes]);
+
+  const handleSaveNotes = () => {
+    updateNotes.mutate({
+      id: houseId,
+      data: { notes: notesValue }
+    }, {
+      onSuccess: () => {
+        toast({ title: "Notes saved successfully" });
+        qc.setQueryData(getGetHouseQueryKey(houseId), (old: any) => 
+          old ? { ...old, notes: notesValue } : old
+        );
+      },
+      onError: () => {
+        toast({ title: "Failed to save notes", variant: "destructive" });
+      }
+    });
+  };
 
   return (
     <Dialog open={!!houseId} onOpenChange={(open) => !open && onClose()}>
@@ -208,8 +239,8 @@ function HouseDetailModal({ houseId, onClose }: { houseId: number, onClose: () =
               <div className="space-y-6">
                 <div>
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Owner Details</h4>
-                  <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
-                    <p className="font-medium">{house.ownerName}</p>
+                  <div className="bg-secondary/30 rounded-lg p-3 space-y-2 border border-border/50">
+                    <p className="font-medium text-foreground">{house.ownerName}</p>
                     {house.ownerPhone && <p className="text-sm text-muted-foreground">{house.ownerPhone}</p>}
                     {house.ownerEmail && <p className="text-sm text-muted-foreground">{house.ownerEmail}</p>}
                   </div>
@@ -237,27 +268,24 @@ function HouseDetailModal({ houseId, onClose }: { houseId: number, onClose: () =
               </div>
               
               <div className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Location</h4>
-                  <div className="bg-secondary rounded-lg h-[160px] overflow-hidden relative border border-border">
-                    {/* Fake static map for now since react-leaflet in modal can be tricky without proper setup */}
-                    <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v10/static/-98.35,39.5,4/600x300?access_token=pk.eyJ1IjoiZmFrZTEyMyIsImEiOiJjazA0NW1naHQwMDJrM2VwaG0xaXVvMmtoIn0.fake')] bg-cover bg-center opacity-50" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-primary rounded-full p-2 shadow-lg shadow-primary/20 animate-bounce">
-                        <MapPin className="h-6 w-6 text-primary-foreground" />
-                      </div>
-                    </div>
+                <div className="flex flex-col h-full">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
+                  <div className="flex-1 flex flex-col gap-3">
+                    <Textarea 
+                      value={notesValue}
+                      onChange={(e) => setNotesValue(e.target.value)}
+                      placeholder="Add property access codes, special instructions, or cleaning preferences..."
+                      className="flex-1 min-h-[160px] resize-none bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-900/50 focus-visible:ring-amber-500/30"
+                    />
+                    <Button 
+                      onClick={handleSaveNotes} 
+                      disabled={updateNotes.isPending || notesValue === (house.notes || "")}
+                      className="w-full"
+                    >
+                      {updateNotes.isPending ? "Saving..." : "Save Notes"}
+                    </Button>
                   </div>
                 </div>
-                
-                {house.notes && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notes</h4>
-                    <p className="text-sm bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50">
-                      {house.notes}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </>

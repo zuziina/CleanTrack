@@ -10,9 +10,11 @@ import type { CreateAssignmentBodyStatus } from "./createAssignmentBodyStatus";
 
 export interface CreateAssignmentBody {
   houseId: number;
+  assignedToClerkId?: string | null;
   date: string;
   timeSlot: string;
   notes?: string | null;
+  guestCount?: number | null;
   status: CreateAssignmentBodyStatus;
   priority: CreateAssignmentBodyPriority;
 }

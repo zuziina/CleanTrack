@@ -5,10 +5,8 @@
  * Cleaning company app API
  * OpenAPI spec version: 0.1.0
  */
+import type { SetRoleBodyRole } from "./setRoleBodyRole";
 
-export interface UpdateProfileBody {
-  name?: string;
-  email?: string;
-  phone?: string;
-  avatarUrl?: string | null;
+export interface SetRoleBody {
+  role: SetRoleBodyRole;
 }

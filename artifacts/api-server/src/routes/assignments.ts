@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db, assignmentsTable, housesTable } from "@workspace/db";
 import {
   CreateAssignmentBody,
@@ -7,79 +8,120 @@ import {
   UpdateAssignmentParams,
   DeleteAssignmentParams,
 } from "@workspace/api-zod";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
-async function formatAssignment(a: typeof assignmentsTable.$inferSelect, house: typeof housesTable.$inferSelect) {
+function requireAuth(req: any, res: any, next: any) {
+  const auth = getAuth(req);
+  if (!auth?.userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  req.clerkUserId = auth.userId;
+  next();
+}
+
+async function getUserRole(clerkUserId: string): Promise<string> {
+  try {
+    const user = await clerkClient().users.getUser(clerkUserId);
+    return (user.publicMetadata?.role as string) || "employee";
+  } catch {
+    return "employee";
+  }
+}
+
+async function getUsernameById(clerkId: string): Promise<string | null> {
+  try {
+    const user = await clerkClient().users.getUser(clerkId);
+    const email = user.emailAddresses?.[0]?.emailAddress || "";
+    return user.username || user.firstName || email.split("@")[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect; houses: typeof housesTable.$inferSelect }) {
+  let assignedToUsername: string | null = null;
+  if (r.assignments.assignedToClerkId) {
+    assignedToUsername = await getUsernameById(r.assignments.assignedToClerkId);
+  }
   return {
-    id: a.id,
-    houseId: a.houseId,
-    houseName: house.name,
-    houseAddress: `${house.address}, ${house.city}, ${house.state}`,
-    date: a.date,
-    timeSlot: a.timeSlot,
-    notes: a.notes,
-    status: a.status,
-    priority: a.priority,
-    createdAt: a.createdAt.toISOString(),
+    id: r.assignments.id,
+    houseId: r.assignments.houseId,
+    houseName: r.houses.name,
+    houseAddress: `${r.houses.address}, ${r.houses.city}, ${r.houses.state}`,
+    assignedToClerkId: r.assignments.assignedToClerkId,
+    assignedToUsername,
+    date: r.assignments.date,
+    timeSlot: r.assignments.timeSlot,
+    notes: r.assignments.notes,
+    guestCount: r.assignments.guestCount,
+    status: r.assignments.status,
+    priority: r.assignments.priority,
+    createdAt: r.assignments.createdAt.toISOString(),
   };
 }
 
-router.get("/today", async (req, res) => {
+router.get("/today", requireAuth, async (req: any, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const rows = await db
-      .select()
-      .from(assignmentsTable)
-      .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
-      .where(eq(assignmentsTable.date, today))
-      .orderBy(assignmentsTable.timeSlot);
-    res.json(rows.map((r) => ({
-      id: r.assignments.id,
-      houseId: r.assignments.houseId,
-      houseName: r.houses.name,
-      houseAddress: `${r.houses.address}, ${r.houses.city}, ${r.houses.state}`,
-      date: r.assignments.date,
-      timeSlot: r.assignments.timeSlot,
-      notes: r.assignments.notes,
-      status: r.assignments.status,
-      priority: r.assignments.priority,
-      createdAt: r.assignments.createdAt.toISOString(),
-    })));
+    const role = await getUserRole(req.clerkUserId);
+    let rows;
+    if (role === "boss") {
+      rows = await db
+        .select()
+        .from(assignmentsTable)
+        .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
+        .where(eq(assignmentsTable.date, today))
+        .orderBy(assignmentsTable.timeSlot);
+    } else {
+      rows = await db
+        .select()
+        .from(assignmentsTable)
+        .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
+        .where(and(eq(assignmentsTable.date, today), eq(assignmentsTable.assignedToClerkId, req.clerkUserId)))
+        .orderBy(assignmentsTable.timeSlot);
+    }
+    res.json(await Promise.all(rows.map(formatRow)));
   } catch (err) {
     req.log.error({ err }, "Failed to get today's assignments");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req: any, res) => {
   try {
-    const rows = await db
-      .select()
-      .from(assignmentsTable)
-      .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
-      .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
-    res.json(rows.map((r) => ({
-      id: r.assignments.id,
-      houseId: r.assignments.houseId,
-      houseName: r.houses.name,
-      houseAddress: `${r.houses.address}, ${r.houses.city}, ${r.houses.state}`,
-      date: r.assignments.date,
-      timeSlot: r.assignments.timeSlot,
-      notes: r.assignments.notes,
-      status: r.assignments.status,
-      priority: r.assignments.priority,
-      createdAt: r.assignments.createdAt.toISOString(),
-    })));
+    const role = await getUserRole(req.clerkUserId);
+    let rows;
+    if (role === "boss") {
+      rows = await db
+        .select()
+        .from(assignmentsTable)
+        .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
+        .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
+    } else {
+      rows = await db
+        .select()
+        .from(assignmentsTable)
+        .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
+        .where(eq(assignmentsTable.assignedToClerkId, req.clerkUserId))
+        .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
+    }
+    res.json(await Promise.all(rows.map(formatRow)));
   } catch (err) {
     req.log.error({ err }, "Failed to list assignments");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, async (req: any, res) => {
   try {
+    const role = await getUserRole(req.clerkUserId);
+    if (role !== "boss") {
+      res.status(403).json({ error: "Only bosses can create assignments" });
+      return;
+    }
     const parsed = CreateAssignmentBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid request body" });
@@ -91,14 +133,14 @@ router.post("/", async (req, res) => {
       res.status(404).json({ error: "House not found" });
       return;
     }
-    res.status(201).json(await formatAssignment(a, house));
+    res.status(201).json(await formatRow({ assignments: a, houses: house }));
   } catch (err) {
     req.log.error({ err }, "Failed to create assignment");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireAuth, async (req: any, res) => {
   try {
     const parsed = GetAssignmentParams.safeParse({ id: Number(req.params.id) });
     if (!parsed.success) {
@@ -114,26 +156,14 @@ router.get("/:id", async (req, res) => {
       res.status(404).json({ error: "Assignment not found" });
       return;
     }
-    const r = rows[0];
-    res.json({
-      id: r.assignments.id,
-      houseId: r.assignments.houseId,
-      houseName: r.houses.name,
-      houseAddress: `${r.houses.address}, ${r.houses.city}, ${r.houses.state}`,
-      date: r.assignments.date,
-      timeSlot: r.assignments.timeSlot,
-      notes: r.assignments.notes,
-      status: r.assignments.status,
-      priority: r.assignments.priority,
-      createdAt: r.assignments.createdAt.toISOString(),
-    });
+    res.json(await formatRow(rows[0]));
   } catch (err) {
     req.log.error({ err }, "Failed to get assignment");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireAuth, async (req: any, res) => {
   try {
     const paramsParsed = UpdateAssignmentParams.safeParse({ id: Number(req.params.id) });
     if (!paramsParsed.success) {
@@ -159,15 +189,20 @@ router.put("/:id", async (req, res) => {
       res.status(404).json({ error: "House not found" });
       return;
     }
-    res.json(await formatAssignment(a, house));
+    res.json(await formatRow({ assignments: a, houses: house }));
   } catch (err) {
     req.log.error({ err }, "Failed to update assignment");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAuth, async (req: any, res) => {
   try {
+    const role = await getUserRole(req.clerkUserId);
+    if (role !== "boss") {
+      res.status(403).json({ error: "Only bosses can delete assignments" });
+      return;
+    }
     const parsed = DeleteAssignmentParams.safeParse({ id: Number(req.params.id) });
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid id" });

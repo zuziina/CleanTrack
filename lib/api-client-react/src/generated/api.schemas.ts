@@ -9,22 +9,32 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface Profile {
-  id: number;
-  name: string;
+export type AppUserRole = (typeof AppUserRole)[keyof typeof AppUserRole];
+
+export const AppUserRole = {
+  boss: "boss",
+  employee: "employee",
+} as const;
+
+export interface AppUser {
+  clerkId: string;
+  username: string;
   email: string;
-  phone: string;
-  role: string;
-  avatarUrl?: string | null;
-  companyName: string;
-  startDate: string;
+  role: AppUserRole;
+  firstName?: string | null;
+  lastName?: string | null;
 }
 
-export interface UpdateProfileBody {
-  name?: string;
-  email?: string;
-  phone?: string;
-  avatarUrl?: string | null;
+export type SetRoleBodyRole =
+  (typeof SetRoleBodyRole)[keyof typeof SetRoleBodyRole];
+
+export const SetRoleBodyRole = {
+  boss: "boss",
+  employee: "employee",
+} as const;
+
+export interface SetRoleBody {
+  role: SetRoleBodyRole;
 }
 
 export type AssignmentStatus =
@@ -50,9 +60,12 @@ export interface Assignment {
   houseId: number;
   houseName: string;
   houseAddress: string;
+  assignedToClerkId?: string | null;
+  assignedToUsername?: string | null;
   date: string;
   timeSlot: string;
   notes?: string | null;
+  guestCount?: number | null;
   status: AssignmentStatus;
   priority: AssignmentPriority;
   createdAt: string;
@@ -78,9 +91,11 @@ export const CreateAssignmentBodyPriority = {
 
 export interface CreateAssignmentBody {
   houseId: number;
+  assignedToClerkId?: string | null;
   date: string;
   timeSlot: string;
   notes?: string | null;
+  guestCount?: number | null;
   status: CreateAssignmentBodyStatus;
   priority: CreateAssignmentBodyPriority;
 }
@@ -104,9 +119,11 @@ export const UpdateAssignmentBodyPriority = {
 } as const;
 
 export interface UpdateAssignmentBody {
+  assignedToClerkId?: string | null;
   date?: string;
   timeSlot?: string;
   notes?: string | null;
+  guestCount?: number | null;
   status?: UpdateAssignmentBodyStatus;
   priority?: UpdateAssignmentBodyPriority;
 }
@@ -218,6 +235,10 @@ export interface UpdateHouseBody {
   bedrooms?: number | null;
   bathrooms?: number | null;
   status?: UpdateHouseBodyStatus;
+}
+
+export interface UpdateHouseNotesBody {
+  notes: string | null;
 }
 
 export interface HouseStats {

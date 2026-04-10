@@ -17,16 +17,17 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AppUser,
   Assignment,
   CreateAssignmentBody,
   CreateHouseBody,
   HealthStatus,
   House,
   HouseStats,
-  Profile,
+  SetRoleBody,
   UpdateAssignmentBody,
   UpdateHouseBody,
-  UpdateProfileBody,
+  UpdateHouseNotesBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -114,70 +115,62 @@ export function useHealthCheck<
 }
 
 /**
- * @summary Get current user profile
+ * @summary List all employees (boss only)
  */
-export const getGetProfileUrl = () => {
-  return `/api/profile`;
+export const getListUsersUrl = () => {
+  return `/api/users`;
 };
 
-export const getProfile = async (options?: RequestInit): Promise<Profile> => {
-  return customFetch<Profile>(getGetProfileUrl(), {
+export const listUsers = async (options?: RequestInit): Promise<AppUser[]> => {
+  return customFetch<AppUser[]>(getListUsersUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetProfileQueryKey = () => {
-  return [`/api/profile`] as const;
+export const getListUsersQueryKey = () => {
+  return [`/api/users`] as const;
 };
 
-export const getGetProfileQueryOptions = <
-  TData = Awaited<ReturnType<typeof getProfile>>,
+export const getListUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listUsers>>,
   TError = ErrorType<unknown>,
 >(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getProfile>>,
-    TError,
-    TData
-  >;
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>;
   request?: SecondParameter<typeof customFetch>;
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetProfileQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListUsersQueryKey();
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfile>>> = ({
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({
     signal,
-  }) => getProfile({ signal, ...requestOptions });
+  }) => listUsers({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof getProfile>>,
+    Awaited<ReturnType<typeof listUsers>>,
     TError,
     TData
   > & { queryKey: QueryKey };
 };
 
-export type GetProfileQueryResult = NonNullable<
-  Awaited<ReturnType<typeof getProfile>>
+export type ListUsersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listUsers>>
 >;
-export type GetProfileQueryError = ErrorType<unknown>;
+export type ListUsersQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get current user profile
+ * @summary List all employees (boss only)
  */
 
-export function useGetProfile<
-  TData = Awaited<ReturnType<typeof getProfile>>,
+export function useListUsers<
+  TData = Awaited<ReturnType<typeof listUsers>>,
   TError = ErrorType<unknown>,
 >(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getProfile>>,
-    TError,
-    TData
-  >;
+  query?: UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetProfileQueryOptions(options);
+  const queryOptions = getListUsersQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -187,42 +180,105 @@ export function useGetProfile<
 }
 
 /**
- * @summary Update user profile
+ * @summary Get current user info (role, username)
  */
-export const getUpdateProfileUrl = () => {
-  return `/api/profile`;
+export const getGetMeUrl = () => {
+  return `/api/users/me`;
 };
 
-export const updateProfile = async (
-  updateProfileBody: UpdateProfileBody,
-  options?: RequestInit,
-): Promise<Profile> => {
-  return customFetch<Profile>(getUpdateProfileUrl(), {
+export const getMe = async (options?: RequestInit): Promise<AppUser> => {
+  return customFetch<AppUser>(getGetMeUrl(), {
     ...options,
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(updateProfileBody),
+    method: "GET",
   });
 };
 
-export const getUpdateProfileMutationOptions = <
+export const getGetMeQueryKey = () => {
+  return [`/api/users/me`] as const;
+};
+
+export const getGetMeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMe>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({
+    signal,
+  }) => getMe({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMe>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>;
+export type GetMeQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current user info (role, username)
+ */
+
+export function useGetMe<
+  TData = Awaited<ReturnType<typeof getMe>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Set role for current user (called on sign-up)
+ */
+export const getSetUserRoleUrl = () => {
+  return `/api/users/set-role`;
+};
+
+export const setUserRole = async (
+  setRoleBody: SetRoleBody,
+  options?: RequestInit,
+): Promise<AppUser> => {
+  return customFetch<AppUser>(getSetUserRoleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setRoleBody),
+  });
+};
+
+export const getSetUserRoleMutationOptions = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateProfile>>,
+    Awaited<ReturnType<typeof setUserRole>>,
     TError,
-    { data: BodyType<UpdateProfileBody> },
+    { data: BodyType<SetRoleBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof updateProfile>>,
+  Awaited<ReturnType<typeof setUserRole>>,
   TError,
-  { data: BodyType<UpdateProfileBody> },
+  { data: BodyType<SetRoleBody> },
   TContext
 > => {
-  const mutationKey = ["updateProfile"];
+  const mutationKey = ["setUserRole"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -232,48 +288,48 @@ export const getUpdateProfileMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof updateProfile>>,
-    { data: BodyType<UpdateProfileBody> }
+    Awaited<ReturnType<typeof setUserRole>>,
+    { data: BodyType<SetRoleBody> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return updateProfile(data, requestOptions);
+    return setUserRole(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type UpdateProfileMutationResult = NonNullable<
-  Awaited<ReturnType<typeof updateProfile>>
+export type SetUserRoleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setUserRole>>
 >;
-export type UpdateProfileMutationBody = BodyType<UpdateProfileBody>;
-export type UpdateProfileMutationError = ErrorType<unknown>;
+export type SetUserRoleMutationBody = BodyType<SetRoleBody>;
+export type SetUserRoleMutationError = ErrorType<unknown>;
 
 /**
- * @summary Update user profile
+ * @summary Set role for current user (called on sign-up)
  */
-export const useUpdateProfile = <
+export const useSetUserRole = <
   TError = ErrorType<unknown>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateProfile>>,
+    Awaited<ReturnType<typeof setUserRole>>,
     TError,
-    { data: BodyType<UpdateProfileBody> },
+    { data: BodyType<SetRoleBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof updateProfile>>,
+  Awaited<ReturnType<typeof setUserRole>>,
   TError,
-  { data: BodyType<UpdateProfileBody> },
+  { data: BodyType<SetRoleBody> },
   TContext
 > => {
-  return useMutation(getUpdateProfileMutationOptions(options));
+  return useMutation(getSetUserRoleMutationOptions(options));
 };
 
 /**
- * @summary List all daily assignments
+ * @summary List assignments (employees see their own, boss sees all)
  */
 export const getListAssignmentsUrl = () => {
   return `/api/assignments`;
@@ -324,7 +380,7 @@ export type ListAssignmentsQueryResult = NonNullable<
 export type ListAssignmentsQueryError = ErrorType<unknown>;
 
 /**
- * @summary List all daily assignments
+ * @summary List assignments (employees see their own, boss sees all)
  */
 
 export function useListAssignments<
@@ -692,7 +748,7 @@ export const useDeleteAssignment = <
 };
 
 /**
- * @summary Get today's assignments
+ * @summary Get today's assignments for the current user (employees) or all (boss)
  */
 export const getGetTodayAssignmentsUrl = () => {
   return `/api/assignments/today`;
@@ -743,7 +799,7 @@ export type GetTodayAssignmentsQueryResult = NonNullable<
 export type GetTodayAssignmentsQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get today's assignments
+ * @summary Get today's assignments for the current user (employees) or all (boss)
  */
 
 export function useGetTodayAssignments<
@@ -1179,6 +1235,93 @@ export const useDeleteHouse = <
   TContext
 > => {
   return useMutation(getDeleteHouseMutationOptions(options));
+};
+
+/**
+ * @summary Update notes for a house (editable by anyone)
+ */
+export const getUpdateHouseNotesUrl = (id: number) => {
+  return `/api/houses/${id}/notes`;
+};
+
+export const updateHouseNotes = async (
+  id: number,
+  updateHouseNotesBody: UpdateHouseNotesBody,
+  options?: RequestInit,
+): Promise<House> => {
+  return customFetch<House>(getUpdateHouseNotesUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateHouseNotesBody),
+  });
+};
+
+export const getUpdateHouseNotesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateHouseNotes>>,
+    TError,
+    { id: number; data: BodyType<UpdateHouseNotesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateHouseNotes>>,
+  TError,
+  { id: number; data: BodyType<UpdateHouseNotesBody> },
+  TContext
+> => {
+  const mutationKey = ["updateHouseNotes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateHouseNotes>>,
+    { id: number; data: BodyType<UpdateHouseNotesBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateHouseNotes(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateHouseNotesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateHouseNotes>>
+>;
+export type UpdateHouseNotesMutationBody = BodyType<UpdateHouseNotesBody>;
+export type UpdateHouseNotesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update notes for a house (editable by anyone)
+ */
+export const useUpdateHouseNotes = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateHouseNotes>>,
+    TError,
+    { id: number; data: BodyType<UpdateHouseNotesBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateHouseNotes>>,
+  TError,
+  { id: number; data: BodyType<UpdateHouseNotesBody> },
+  TContext
+> => {
+  return useMutation(getUpdateHouseNotesMutationOptions(options));
 };
 
 /**
