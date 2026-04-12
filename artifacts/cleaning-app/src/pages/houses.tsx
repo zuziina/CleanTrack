@@ -210,7 +210,7 @@ function HouseDetailModal({ houseId, onClose }: { houseId: number, onClose: () =
 
   return (
     <Dialog open={!!houseId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-[#fafaf9]">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-2/3" />
