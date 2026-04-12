@@ -111,7 +111,6 @@ function ClerkProviderWithRoutes() {
             </Route>
             <Route component={NotFound} />
           </Switch>
-          <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
     </ClerkProvider>
@@ -120,9 +119,12 @@ function ClerkProviderWithRoutes() {
 
 function App() {
   return (
-    <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
-    </WouterRouter>
+    <>
+      <WouterRouter base={basePath}>
+        <ClerkProviderWithRoutes />
+      </WouterRouter>
+      <Toaster richColors position="top-center" />
+    </>
   );
 }
 
