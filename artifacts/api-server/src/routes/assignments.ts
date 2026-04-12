@@ -24,7 +24,7 @@ function requireAuth(req: any, res: any, next: any) {
 
 async function getUserRole(clerkUserId: string): Promise<string> {
   try {
-    const user = await clerkClient().users.getUser(clerkUserId);
+    const user = await clerkClient.users.getUser(clerkUserId);
     return (user.publicMetadata?.role as string) || "employee";
   } catch {
     return "employee";
@@ -33,7 +33,7 @@ async function getUserRole(clerkUserId: string): Promise<string> {
 
 async function getUsernameById(clerkId: string): Promise<string | null> {
   try {
-    const user = await clerkClient().users.getUser(clerkId);
+    const user = await clerkClient.users.getUser(clerkId);
     const email = user.emailAddresses?.[0]?.emailAddress || "";
     return user.username || user.firstName || email.split("@")[0] || null;
   } catch {

@@ -30,13 +30,13 @@ function formatUser(user: any) {
 
 router.get("/", requireAuth, async (req: any, res) => {
   try {
-    const meUser = await clerkClient().users.getUser(req.clerkUserId);
+    const meUser = await clerkClient.users.getUser(req.clerkUserId);
     const myRole = (meUser.publicMetadata?.role as string) || "employee";
     if (myRole !== "boss") {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const { data: users } = await clerkClient().users.getUserList({ limit: 100 });
+    const { data: users } = await clerkClient.users.getUserList({ limit: 100 });
     res.json(users.map(formatUser));
   } catch (err) {
     req.log.error({ err }, "Failed to list users");
@@ -46,7 +46,7 @@ router.get("/", requireAuth, async (req: any, res) => {
 
 router.get("/me", requireAuth, async (req: any, res) => {
   try {
-    const user = await clerkClient().users.getUser(req.clerkUserId);
+    const user = await clerkClient.users.getUser(req.clerkUserId);
     res.json(formatUser(user));
   } catch (err) {
     req.log.error({ err }, "Failed to get current user");
@@ -61,13 +61,13 @@ router.post("/set-role", requireAuth, async (req: any, res) => {
       res.status(400).json({ error: "Invalid request body" });
       return;
     }
-    const user = await clerkClient().users.getUser(req.clerkUserId);
+    const user = await clerkClient.users.getUser(req.clerkUserId);
     const existingRole = user.publicMetadata?.role;
     if (existingRole) {
       res.json(formatUser(user));
       return;
     }
-    const updated = await clerkClient().users.updateUserMetadata(req.clerkUserId, {
+    const updated = await clerkClient.users.updateUserMetadata(req.clerkUserId, {
       publicMetadata: { role: parsed.data.role },
     });
     res.json(formatUser(updated));

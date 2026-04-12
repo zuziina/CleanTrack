@@ -50,7 +50,11 @@ export default function SignUpPage() {
 
       if (result.status === "complete") {
         await setActive!({ session: result.createdSessionId });
-        await setUserRole.mutateAsync({ data: { role } });
+        try {
+          await setUserRole.mutateAsync({ data: { role } });
+        } catch {
+          // role will be set on profile load if this fails
+        }
         sessionStorage.setItem("roleChosen", "true");
         setLocation("/profile");
       } else {
@@ -88,7 +92,11 @@ export default function SignUpPage() {
 
       if (result.status === "complete") {
         await setActive!({ session: result.createdSessionId });
-        await setUserRole.mutateAsync({ data: { role } });
+        try {
+          await setUserRole.mutateAsync({ data: { role } });
+        } catch {
+          // role will be set on next profile load if this fails
+        }
         sessionStorage.setItem("roleChosen", "true");
         setLocation("/profile");
       } else {
@@ -262,6 +270,8 @@ export default function SignUpPage() {
                 </p>
               )}
             </div>
+
+            <div id="clerk-captcha" />
 
             {error && (
               <p className="text-sm font-medium text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
