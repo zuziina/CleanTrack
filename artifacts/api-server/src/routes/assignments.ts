@@ -35,7 +35,7 @@ async function getUsernameById(clerkId: string): Promise<string | null> {
   try {
     const user = await clerkClient.users.getUser(clerkId);
     const email = user.emailAddresses?.[0]?.emailAddress || "";
-    return user.username || user.firstName || email.split("@")[0] || null;
+    return (user.unsafeMetadata?.displayName as string) || user.username || user.firstName || email.split("@")[0] || null;
   } catch {
     return null;
   }
