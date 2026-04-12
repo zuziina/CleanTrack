@@ -43,9 +43,9 @@ export default function SignUpPage() {
     try {
       setIsLoading(true);
       const result = await signUp.create({
-        firstName: username,
         emailAddress: email,
         password,
+        unsafeMetadata: { displayName: username },
       });
 
       if (result.status === "complete") {

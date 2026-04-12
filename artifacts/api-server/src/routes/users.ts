@@ -17,7 +17,7 @@ function requireAuth(req: any, res: any, next: any) {
 function formatUser(user: any) {
   const role = (user.publicMetadata?.role as string) || "employee";
   const email = user.emailAddresses?.[0]?.emailAddress || "";
-  const username = user.username || user.firstName || email.split("@")[0] || "Unknown";
+  const username = (user.unsafeMetadata?.displayName as string) || user.username || user.firstName || email.split("@")[0] || "Unknown";
   return {
     clerkId: user.id,
     username,
