@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSignUp } from "@clerk/react";
+import { useSignUp } from "@clerk/react/legacy";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,15 +31,18 @@ export default function SignUpPage() {
     setStep("details");
   };
 
-  const handleSubmitDetails = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isLoaded || !role) return;
+  const handleSubmitDetails = async () => {
+    if (!role) return;
+    if (!signUp) {
+      setError("Authentication is not ready yet. Please wait a moment and try again.");
+      return;
+    }
     setError(null);
     setEmailError(null);
 
     try {
       setIsLoading(true);
-      const result = await signUp!.create({
+      const result = await signUp.create({
         firstName: username,
         emailAddress: email,
         password,
@@ -51,18 +54,23 @@ export default function SignUpPage() {
         sessionStorage.setItem("roleChosen", "true");
         setLocation("/profile");
       } else {
-        await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
         setStep("verify");
       }
     } catch (err: any) {
-      const clerkErrors: any[] = err.errors ?? [];
+      const clerkErrors: any[] = err?.errors ?? [];
       const emailTaken = clerkErrors.some(
-        (e) => e.code === "form_identifier_exists" || e.meta?.paramName === "email_address"
+        (e: any) => e.code === "form_identifier_exists" || e.meta?.paramName === "email_address"
       );
       if (emailTaken) {
         setEmailError("e-mail already in use");
       } else {
-        setError(clerkErrors[0]?.longMessage || clerkErrors[0]?.message || err.message || "Failed to create account.");
+        setError(
+          clerkErrors[0]?.longMessage ||
+          clerkErrors[0]?.message ||
+          err?.message ||
+          "Something went wrong. Please try again."
+        );
       }
     } finally {
       setIsLoading(false);
@@ -71,12 +79,12 @@ export default function SignUpPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoaded || !role) return;
+    if (!signUp || !role) return;
     setError(null);
 
     try {
       setIsLoading(true);
-      const result = await signUp!.attemptEmailAddressVerification({ code });
+      const result = await signUp.attemptEmailAddressVerification({ code });
 
       if (result.status === "complete") {
         await setActive!({ session: result.createdSessionId });
@@ -87,7 +95,8 @@ export default function SignUpPage() {
         setError("Verification incomplete. Please try again.");
       }
     } catch (err: any) {
-      setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || "Invalid code.");
+      const clerkErrors: any[] = err?.errors ?? [];
+      setError(clerkErrors[0]?.longMessage || clerkErrors[0]?.message || err?.message || "Invalid code. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -213,14 +222,13 @@ export default function SignUpPage() {
           <CardDescription>Enter your details below to sign up.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmitDetails} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Full Name</Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                required
                 placeholder="John Doe"
               />
             </div>
@@ -232,7 +240,6 @@ export default function SignUpPage() {
                 type="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
-                required
                 placeholder="john@example.com"
                 className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
               />
@@ -248,7 +255,6 @@ export default function SignUpPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
               />
               {password.length > 0 && password.length < 8 && (
                 <p className="text-xs text-muted-foreground">
@@ -258,12 +264,13 @@ export default function SignUpPage() {
             </div>
 
             {error && (
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm font-medium text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
             )}
 
             <Button
-              type="submit"
+              type="button"
               className="w-full mt-2"
+              onClick={handleSubmitDetails}
               disabled={
                 isLoading ||
                 username.trim().length === 0 ||
@@ -281,7 +288,7 @@ export default function SignUpPage() {
                 Sign in
               </Link>
             </p>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -40,6 +40,14 @@ A cleaning company employee app with authentication and two user roles.
 - Houses: same as employee + editable notes
 - Map: same as employee
 
+## Important Clerk Note
+
+`@clerk/react` v6 changed `useSignUp()` to a signals-based API by default (`{ signUp, errors, fetchStatus }`). This breaks the traditional `signUp.create()` → `result.status` pattern. The sign-up page uses:
+```ts
+import { useSignUp } from "@clerk/react/legacy"; // traditional API with { isLoaded, signUp, setActive }
+```
+Always import from `@clerk/react/legacy` for sign-up/sign-in custom flows that use the `.create()` / `.attempt*()` patterns.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
