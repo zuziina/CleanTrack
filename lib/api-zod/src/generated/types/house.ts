@@ -25,6 +25,7 @@ export interface House {
   size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
+  entryCode?: string | null;
   status: HouseStatus;
   createdAt: string;
 }

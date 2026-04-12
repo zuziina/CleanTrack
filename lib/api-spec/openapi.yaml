@@ -489,8 +489,10 @@ components:
           type: integer
           nullable: true
         bathrooms:
-          type: number
-          format: float
+          type: integer
+          nullable: true
+        entryCode:
+          type: string
           nullable: true
         status:
           type: string
@@ -551,8 +553,10 @@ components:
           type: integer
           nullable: true
         bathrooms:
-          type: number
-          format: float
+          type: integer
+          nullable: true
+        entryCode:
+          type: string
           nullable: true
         status:
           type: string
@@ -566,7 +570,6 @@ components:
         - latitude
         - longitude
         - ownerName
-        - cleaningFrequency
         - status
 
     UpdateHouseBody:
@@ -609,8 +612,10 @@ components:
           type: integer
           nullable: true
         bathrooms:
-          type: number
-          format: float
+          type: integer
+          nullable: true
+        entryCode:
+          type: string
           nullable: true
         status:
           type: string

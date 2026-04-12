@@ -24,5 +24,6 @@ export interface UpdateHouseBody {
   size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
+  entryCode?: string | null;
   status?: UpdateHouseBodyStatus;
 }

@@ -50,7 +50,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-type FrequencyValue = "weekly" | "biweekly" | "monthly";
 type StatusValue = "active" | "inactive";
 
 interface HouseFormState {
@@ -65,9 +64,9 @@ interface HouseFormState {
   ownerPhone: string;
   ownerEmail: string;
   notes: string;
-  cleaningFrequency: FrequencyValue;
   bedrooms: string;
   bathrooms: string;
+  entryCode: string;
   status: StatusValue;
 }
 
@@ -83,9 +82,9 @@ const emptyForm = (): HouseFormState => ({
   ownerPhone: "",
   ownerEmail: "",
   notes: "",
-  cleaningFrequency: "weekly",
   bedrooms: "",
   bathrooms: "",
+  entryCode: "",
   status: "active",
 });
 
@@ -181,20 +180,20 @@ export default function HousesPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-muted-foreground text-sm font-medium mb-1 flex items-center gap-1.5">
-                <CalendarDays size={14} /> Weekly
+                <CalendarDays size={14} /> Jobs Today
               </div>
               <div className="text-3xl font-bold text-foreground">
-                {stats?.weekly || 0}
+                {stats?.totalAssignmentsToday || 0}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-muted-foreground text-sm font-medium mb-1 flex items-center gap-1.5">
-                <CalendarDays size={14} /> Bi-weekly
+                <Activity size={14} /> Inactive
               </div>
               <div className="text-3xl font-bold text-foreground">
-                {stats?.biweekly || 0}
+                {stats?.inactive || 0}
               </div>
             </CardContent>
           </Card>
@@ -282,9 +281,15 @@ export default function HousesPage() {
                         <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors truncate">
                           {house.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {house.ownerName}
-                        </p>
+                        {house.entryCode ? (
+                          <p className="text-sm text-muted-foreground line-clamp-1 font-mono tracking-wide">
+                            Code: {house.entryCode}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground/50 italic line-clamp-1">
+                            No entry code
+                          </p>
+                        )}
                       </div>
                       <Badge
                         variant="outline"
@@ -306,26 +311,21 @@ export default function HousesPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm text-muted-foreground pt-2 border-t border-border/50">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
                         <span
                           className="flex items-center gap-1.5"
                           title="Bedrooms"
                         >
                           <BedDouble className="h-4 w-4" />{" "}
-                          {house.bedrooms || "-"}
+                          {house.bedrooms ?? "-"}
                         </span>
                         <span
                           className="flex items-center gap-1.5"
                           title="Bathrooms"
                         >
                           <Bath className="h-4 w-4" />{" "}
-                          {house.bathrooms || "-"}
+                          {house.bathrooms ?? "-"}
                         </span>
-                      </div>
-                      <Badge variant="secondary" className="font-normal">
-                        {house.cleaningFrequency}
-                      </Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -454,7 +454,7 @@ function HouseDetailModal({
                     <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
                       <BedDouble className="h-5 w-5 mb-1 text-muted-foreground" />
                       <span className="text-lg font-bold leading-none">
-                        {house.bedrooms || "-"}
+                        {house.bedrooms ?? "-"}
                       </span>
                       <span className="text-[10px] text-muted-foreground uppercase mt-1">
                         Beds
@@ -463,18 +463,20 @@ function HouseDetailModal({
                     <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
                       <Bath className="h-5 w-5 mb-1 text-muted-foreground" />
                       <span className="text-lg font-bold leading-none">
-                        {house.bathrooms || "-"}
+                        {house.bathrooms ?? "-"}
                       </span>
                       <span className="text-[10px] text-muted-foreground uppercase mt-1">
                         Baths
                       </span>
                     </div>
-                    <div className="col-span-2 bg-card border border-border/50 rounded-lg p-3 flex items-center justify-between">
-                      <span className="text-sm font-medium">Frequency</span>
-                      <Badge variant="secondary" className="capitalize">
-                        {house.cleaningFrequency}
-                      </Badge>
-                    </div>
+                    {house.entryCode && (
+                      <div className="col-span-2 bg-card border border-border/50 rounded-lg p-3 flex items-center justify-between">
+                        <span className="text-sm font-medium">Entry Code</span>
+                        <span className="font-mono font-semibold tracking-widest text-primary">
+                          {house.entryCode}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -545,9 +547,9 @@ function EditHouseModal({
         ownerPhone: house.ownerPhone || "",
         ownerEmail: house.ownerEmail || "",
         notes: house.notes || "",
-        cleaningFrequency: (house.cleaningFrequency as FrequencyValue) || "weekly",
         bedrooms: house.bedrooms != null ? String(house.bedrooms) : "",
         bathrooms: house.bathrooms != null ? String(house.bathrooms) : "",
+        entryCode: house.entryCode || "",
         status: (house.status as StatusValue) || "active",
       });
     }
@@ -572,9 +574,9 @@ function EditHouseModal({
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
           notes: form.notes || null,
-          cleaningFrequency: form.cleaningFrequency,
           bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
-          bathrooms: form.bathrooms ? parseFloat(form.bathrooms) : null,
+          bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
+          entryCode: form.entryCode || null,
           status: form.status,
         },
       },
@@ -657,25 +659,16 @@ function EditHouseModal({
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Cleaning Frequency">
-                  <Select value={form.cleaningFrequency} onValueChange={(v) => set("cleaningFrequency", v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <Field label="Entry Code">
+                  <Input value={form.entryCode} onChange={(e) => set("entryCode", e.target.value)} placeholder="e.g. 1234#" className="font-mono" />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Bedrooms">
-                  <Input type="number" min="0" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="e.g. 3" />
+                  <Input type="number" min="0" step="1" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="e.g. 3" />
                 </Field>
                 <Field label="Bathrooms">
-                  <Input type="number" min="0" step="0.5" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2.5" />
+                  <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2" />
                 </Field>
               </div>
             </Section>
@@ -793,9 +786,9 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
           notes: form.notes || null,
-          cleaningFrequency: form.cleaningFrequency,
           bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
-          bathrooms: form.bathrooms ? parseFloat(form.bathrooms) : null,
+          bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
+          entryCode: form.entryCode || null,
           status: form.status,
         },
       },
@@ -849,23 +842,16 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Cleaning Frequency">
-                <Select value={form.cleaningFrequency} onValueChange={(v) => set("cleaningFrequency", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Field label="Entry Code">
+                <Input value={form.entryCode} onChange={(e) => set("entryCode", e.target.value)} placeholder="e.g. 1234#" className="font-mono" />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Bedrooms">
-                <Input type="number" min="0" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="e.g. 3" />
+                <Input type="number" min="0" step="1" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="e.g. 3" />
               </Field>
               <Field label="Bathrooms">
-                <Input type="number" min="0" step="0.5" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2.5" />
+                <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2" />
               </Field>
             </div>
           </Section>

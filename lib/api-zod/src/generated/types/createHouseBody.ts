@@ -20,9 +20,10 @@ export interface CreateHouseBody {
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  cleaningFrequency: CreateHouseBodyCleaningFrequency;
+  cleaningFrequency?: CreateHouseBodyCleaningFrequency;
   size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
+  entryCode?: string | null;
   status: CreateHouseBodyStatus;
 }

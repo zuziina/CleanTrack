@@ -18,7 +18,8 @@ export const housesTable = pgTable("houses", {
   cleaningFrequency: text("cleaning_frequency").notNull().default("biweekly"),
   size: text("size"),
   bedrooms: integer("bedrooms"),
-  bathrooms: real("bathrooms"),
+  bathrooms: integer("bathrooms"),
+  entryCode: text("entry_code"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
