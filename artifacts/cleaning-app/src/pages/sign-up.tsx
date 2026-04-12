@@ -273,7 +273,6 @@ export default function SignUpPage() {
               onClick={handleSubmitDetails}
               disabled={
                 isLoading ||
-                username.trim().length === 0 ||
                 email.trim().length === 0 ||
                 password.length < 8
               }
