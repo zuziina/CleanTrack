@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { User, Briefcase, Loader2, ArrowLeft, MailCheck } from "lucide-react";
 import { useSetUserRole } from "@workspace/api-client-react";
+import { Link } from "wouter";
 
 type Step = "role" | "details" | "verify";
 
@@ -36,13 +37,21 @@ export default function SignUpPage() {
 
     try {
       setIsLoading(true);
-      await signUp!.create({
+      const result = await signUp!.create({
         firstName: username,
         emailAddress: email,
         password,
       });
-      await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
-      setStep("verify");
+
+      if (result.status === "complete") {
+        await setActive!({ session: result.createdSessionId });
+        await setUserRole.mutateAsync({ data: { role } });
+        sessionStorage.setItem("roleChosen", "true");
+        setLocation("/profile");
+      } else {
+        await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
+        setStep("verify");
+      }
     } catch (err: any) {
       setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || "Failed to create account.");
     } finally {
@@ -238,6 +247,13 @@ export default function SignUpPage() {
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Continue
             </Button>
+
+            <p className="text-center text-sm text-muted-foreground pt-2">
+              Already have an account?{" "}
+              <Link href="/sign-in" className="text-primary font-medium hover:underline">
+                Sign in
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
