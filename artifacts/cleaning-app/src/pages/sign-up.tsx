@@ -241,7 +241,7 @@ export default function SignUpPage() {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -249,8 +249,12 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
               />
+              {password.length > 0 && password.length < 8 && (
+                <p className="text-xs text-muted-foreground">
+                  {8 - password.length} more character{8 - password.length !== 1 ? "s" : ""} needed
+                </p>
+              )}
             </div>
 
             {error && (
@@ -262,7 +266,6 @@ export default function SignUpPage() {
               className="w-full mt-2"
               disabled={
                 isLoading ||
-                !isLoaded ||
                 username.trim().length === 0 ||
                 email.trim().length === 0 ||
                 password.length < 8
