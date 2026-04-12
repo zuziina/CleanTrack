@@ -24,6 +24,7 @@ export default function SignUpPage() {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleSelectRole = (r: "boss" | "employee") => {
     setRole(r);
@@ -34,6 +35,7 @@ export default function SignUpPage() {
     e.preventDefault();
     if (!isLoaded || !role) return;
     setError(null);
+    setEmailError(null);
 
     try {
       setIsLoading(true);
@@ -53,7 +55,15 @@ export default function SignUpPage() {
         setStep("verify");
       }
     } catch (err: any) {
-      setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || err.message || "Failed to create account.");
+      const clerkErrors: any[] = err.errors ?? [];
+      const emailTaken = clerkErrors.some(
+        (e) => e.code === "form_identifier_exists" || e.meta?.paramName === "email_address"
+      );
+      if (emailTaken) {
+        setEmailError("e-mail already in use");
+      } else {
+        setError(clerkErrors[0]?.longMessage || clerkErrors[0]?.message || err.message || "Failed to create account.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -215,16 +225,20 @@ export default function SignUpPage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
                 required
                 placeholder="john@example.com"
+                className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
               />
+              {emailError && (
+                <p className="text-sm text-destructive">{emailError}</p>
+              )}
             </div>
 
             <div className="space-y-2">
