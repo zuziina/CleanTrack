@@ -257,7 +257,17 @@ export default function SignUpPage() {
               <p className="text-sm text-destructive">{error}</p>
             )}
 
-            <Button type="submit" className="w-full mt-2" disabled={isLoading || !isLoaded}>
+            <Button
+              type="submit"
+              className="w-full mt-2"
+              disabled={
+                isLoading ||
+                !isLoaded ||
+                username.trim().length === 0 ||
+                email.trim().length === 0 ||
+                password.length < 8
+              }
+            >
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Continue
             </Button>
