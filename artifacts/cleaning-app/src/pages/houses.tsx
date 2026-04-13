@@ -82,24 +82,26 @@ function getAddressDisplay(house: { address: string; city: string; state: string
   if (house.mapsLink) {
     const parsed = parseMapsUrl(house.mapsLink);
     if (parsed.display) return parsed.display;
+    return "Location set";
   }
-  return `${house.address}, ${house.city}, ${house.state} ${house.zipCode}`;
+  if (house.address) {
+    const parts = [house.address, house.city, house.state].filter(Boolean).join(", ");
+    return house.zipCode ? `${parts} ${house.zipCode}` : parts;
+  }
+  return "No location set";
 }
 
 function getOpenMapsHref(house: { address: string; city: string; state: string; zipCode: string; mapsLink?: string | null }): string {
-  return house.mapsLink || mapsUrl(house.address, house.city, house.state, house.zipCode);
+  if (house.mapsLink) return house.mapsLink;
+  if (house.address) return mapsUrl(house.address, house.city, house.state, house.zipCode);
+  return "#";
 }
 
 type StatusValue = "active" | "inactive";
 
 interface HouseFormState {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: string;
-  longitude: string;
+  mapsLink: string;
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
@@ -112,12 +114,7 @@ interface HouseFormState {
 
 const emptyForm = (): HouseFormState => ({
   name: "",
-  address: "",
-  city: "",
-  state: "",
-  zipCode: "",
-  latitude: "0",
-  longitude: "0",
+  mapsLink: "",
   ownerName: "",
   ownerPhone: "",
   ownerEmail: "",
@@ -141,7 +138,7 @@ export default function HousesPage() {
   const filteredHouses = houses?.filter((h) => {
     const matchesSearch =
       h.name.toLowerCase().includes(search.toLowerCase()) ||
-      h.address.toLowerCase().includes(search.toLowerCase()) ||
+      getAddressDisplay(h).toLowerCase().includes(search.toLowerCase()) ||
       h.ownerName.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || h.status === statusFilter;
@@ -750,12 +747,7 @@ function EditHouseModal({
     if (house) {
       setForm({
         name: house.name,
-        address: house.address,
-        city: house.city,
-        state: house.state,
-        zipCode: house.zipCode,
-        latitude: String(house.latitude ?? 0),
-        longitude: String(house.longitude ?? 0),
+        mapsLink: house.mapsLink || "",
         ownerName: house.ownerName,
         ownerPhone: house.ownerPhone || "",
         ownerEmail: house.ownerEmail || "",
@@ -772,17 +764,18 @@ function EditHouseModal({
     setForm((f) => ({ ...f, [key]: val }));
 
   const handleSave = () => {
+    const parsed = form.mapsLink ? parseMapsUrl(form.mapsLink) : null;
     updateHouse.mutate(
       {
         id: houseId,
         data: {
           name: form.name,
-          address: form.address,
-          city: form.city,
-          state: form.state,
-          zipCode: form.zipCode,
-          latitude: parseFloat(form.latitude) || 0,
-          longitude: parseFloat(form.longitude) || 0,
+          address: parsed?.display || "",
+          city: "",
+          state: "",
+          zipCode: "",
+          latitude: parsed?.lat ?? 0,
+          longitude: parsed?.lng ?? 0,
           ownerName: form.ownerName,
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
@@ -790,6 +783,7 @@ function EditHouseModal({
           bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
           bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
           entryCode: form.entryCode || null,
+          mapsLink: form.mapsLink || null,
           status: form.status,
         },
       },
@@ -886,31 +880,19 @@ function EditHouseModal({
               </div>
             </Section>
 
-            <Section title="Address">
-              <Field label="Street Address">
-                <Input value={form.address} onChange={(e) => set("address", e.target.value)} />
+            <Section title="Location">
+              <Field label="Google Maps Link">
+                <Input
+                  value={form.mapsLink}
+                  onChange={(e) => set("mapsLink", e.target.value)}
+                  placeholder="Paste a Google Maps link…"
+                />
               </Field>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-1">
-                  <Field label="City">
-                    <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
-                  </Field>
-                </div>
-                <Field label="State">
-                  <Input value={form.state} onChange={(e) => set("state", e.target.value)} maxLength={2} />
-                </Field>
-                <Field label="Zip Code">
-                  <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Latitude">
-                  <Input type="number" step="any" value={form.latitude} onChange={(e) => set("latitude", e.target.value)} />
-                </Field>
-                <Field label="Longitude">
-                  <Input type="number" step="any" value={form.longitude} onChange={(e) => set("longitude", e.target.value)} />
-                </Field>
-              </div>
+              {form.mapsLink && parseMapsUrl(form.mapsLink).display && (
+                <p className="text-xs text-muted-foreground -mt-2 px-1">
+                  Will show as: <span className="font-medium text-foreground">{parseMapsUrl(form.mapsLink).display}</span>
+                </p>
+              )}
             </Section>
 
             <Section title="Owner Details">
@@ -962,7 +944,7 @@ function EditHouseModal({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={updateHouse.isPending || !form.name || !form.address}
+              disabled={updateHouse.isPending || !form.name || !form.ownerName}
               className="min-w-[100px]"
             >
               {updateHouse.isPending ? "Saving..." : "Save Changes"}
@@ -985,16 +967,17 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
     setForm((f) => ({ ...f, [key]: val }));
 
   const handleCreate = () => {
+    const parsed = form.mapsLink ? parseMapsUrl(form.mapsLink) : null;
     createHouse.mutate(
       {
         data: {
           name: form.name,
-          address: form.address,
-          city: form.city,
-          state: form.state,
-          zipCode: form.zipCode,
-          latitude: parseFloat(form.latitude) || 0,
-          longitude: parseFloat(form.longitude) || 0,
+          address: parsed?.display || "",
+          city: "",
+          state: "",
+          zipCode: "",
+          latitude: parsed?.lat ?? 0,
+          longitude: parsed?.lng ?? 0,
           ownerName: form.ownerName,
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
@@ -1002,6 +985,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
           bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
           entryCode: form.entryCode || null,
+          mapsLink: form.mapsLink || null,
           status: form.status,
         },
       },
@@ -1069,31 +1053,19 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
             </div>
           </Section>
 
-          <Section title="Address">
-            <Field label="Street Address *">
-              <Input value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="e.g. 123 Main St" />
+          <Section title="Location">
+            <Field label="Google Maps Link">
+              <Input
+                value={form.mapsLink}
+                onChange={(e) => set("mapsLink", e.target.value)}
+                placeholder="Paste a Google Maps link…"
+              />
             </Field>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-1">
-                <Field label="City *">
-                  <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Austin" />
-                </Field>
-              </div>
-              <Field label="State *">
-                <Input value={form.state} onChange={(e) => set("state", e.target.value)} maxLength={2} placeholder="TX" />
-              </Field>
-              <Field label="Zip Code *">
-                <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} placeholder="78701" />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Latitude">
-                <Input type="number" step="any" value={form.latitude} onChange={(e) => set("latitude", e.target.value)} placeholder="30.2672" />
-              </Field>
-              <Field label="Longitude">
-                <Input type="number" step="any" value={form.longitude} onChange={(e) => set("longitude", e.target.value)} placeholder="-97.7431" />
-              </Field>
-            </div>
+            {form.mapsLink && parseMapsUrl(form.mapsLink).display && (
+              <p className="text-xs text-muted-foreground -mt-2 px-1">
+                Will show as: <span className="font-medium text-foreground">{parseMapsUrl(form.mapsLink).display}</span>
+              </p>
+            )}
           </Section>
 
           <Section title="Owner Details">
@@ -1129,10 +1101,6 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
             disabled={
               createHouse.isPending ||
               !form.name ||
-              !form.address ||
-              !form.city ||
-              !form.state ||
-              !form.zipCode ||
               !form.ownerName
             }
             className="min-w-[120px]"

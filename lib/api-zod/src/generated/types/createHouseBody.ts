@@ -10,12 +10,12 @@ import type { CreateHouseBodyStatus } from "./createHouseBodyStatus";
 
 export interface CreateHouseBody {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: number;
-  longitude: number;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  latitude?: number;
+  longitude?: number;
   ownerName: string;
   ownerPhone?: string | null;
   ownerEmail?: string | null;

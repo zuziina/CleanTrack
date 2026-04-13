@@ -206,12 +206,12 @@ export const ListHousesResponse = zod.array(ListHousesResponseItem);
  */
 export const CreateHouseBody = zod.object({
   name: zod.string(),
-  address: zod.string(),
-  city: zod.string(),
-  state: zod.string(),
-  zipCode: zod.string(),
-  latitude: zod.number(),
-  longitude: zod.number(),
+  address: zod.string().optional(),
+  city: zod.string().optional(),
+  state: zod.string().optional(),
+  zipCode: zod.string().optional(),
+  latitude: zod.number().optional(),
+  longitude: zod.number().optional(),
   ownerName: zod.string(),
   ownerPhone: zod.string().nullish(),
   ownerEmail: zod.string().nullish(),

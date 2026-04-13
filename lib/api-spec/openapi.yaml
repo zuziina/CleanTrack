@@ -569,12 +569,6 @@ components:
           enum: [active, inactive]
       required:
         - name
-        - address
-        - city
-        - state
-        - zipCode
-        - latitude
-        - longitude
         - ownerName
         - status
 
