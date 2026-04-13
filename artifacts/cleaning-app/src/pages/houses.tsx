@@ -1050,7 +1050,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
             <Field label="Street Address *">
               <Input value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="e.g. 123 Main St" />
             </Field>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="col-span-1">
                 <Field label="City *">
                   <Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Austin" />
@@ -1058,9 +1058,6 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
               </div>
               <Field label="State *">
                 <Input value={form.state} onChange={(e) => set("state", e.target.value)} maxLength={2} placeholder="TX" />
-              </Field>
-              <Field label="Zip Code *">
-                <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} placeholder="78701" />
               </Field>
             </div>
             <Field label="Pin Location">
@@ -1104,7 +1101,6 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
               !form.address ||
               !form.city ||
               !form.state ||
-              !form.zipCode ||
               !form.ownerName
             }
             className="min-w-[120px]"
