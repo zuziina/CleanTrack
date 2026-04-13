@@ -494,9 +494,6 @@ components:
         entryCode:
           type: string
           nullable: true
-        mapsLink:
-          type: string
-          nullable: true
         status:
           type: string
           enum: [active, inactive]
@@ -561,14 +558,17 @@ components:
         entryCode:
           type: string
           nullable: true
-        mapsLink:
-          type: string
-          nullable: true
         status:
           type: string
           enum: [active, inactive]
       required:
         - name
+        - address
+        - city
+        - state
+        - zipCode
+        - latitude
+        - longitude
         - ownerName
         - status
 
@@ -615,9 +615,6 @@ components:
           type: integer
           nullable: true
         entryCode:
-          type: string
-          nullable: true
-        mapsLink:
           type: string
           nullable: true
         status:

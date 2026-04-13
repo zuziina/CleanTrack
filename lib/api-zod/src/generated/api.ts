@@ -195,7 +195,6 @@ export const ListHousesResponseItem = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
-  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });
@@ -206,12 +205,12 @@ export const ListHousesResponse = zod.array(ListHousesResponseItem);
  */
 export const CreateHouseBody = zod.object({
   name: zod.string(),
-  address: zod.string().optional(),
-  city: zod.string().optional(),
-  state: zod.string().optional(),
-  zipCode: zod.string().optional(),
-  latitude: zod.number().optional(),
-  longitude: zod.number().optional(),
+  address: zod.string(),
+  city: zod.string(),
+  state: zod.string(),
+  zipCode: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
   ownerName: zod.string(),
   ownerPhone: zod.string().nullish(),
   ownerEmail: zod.string().nullish(),
@@ -221,7 +220,6 @@ export const CreateHouseBody = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
-  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
 });
 
@@ -250,7 +248,6 @@ export const GetHouseResponse = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
-  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });
@@ -279,7 +276,6 @@ export const UpdateHouseBody = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
-  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]).optional(),
 });
 
@@ -301,7 +297,6 @@ export const UpdateHouseResponse = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
-  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });
@@ -342,7 +337,6 @@ export const UpdateHouseNotesResponse = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
-  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });

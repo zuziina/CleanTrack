@@ -43,7 +43,6 @@ function formatHouse(h: typeof housesTable.$inferSelect) {
     bedrooms: h.bedrooms,
     bathrooms: h.bathrooms,
     entryCode: h.entryCode,
-    mapsLink: h.mapsLink,
     status: h.status,
     createdAt: h.createdAt.toISOString(),
   };
