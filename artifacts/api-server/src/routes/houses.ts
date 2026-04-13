@@ -28,18 +28,11 @@ function formatHouse(h: typeof housesTable.$inferSelect) {
   return {
     id: h.id,
     name: h.name,
-    address: h.address,
-    city: h.city,
-    state: h.state,
-    zipCode: h.zipCode,
-    latitude: h.latitude,
-    longitude: h.longitude,
+    mapLink: h.mapLink,
     ownerName: h.ownerName,
     ownerPhone: h.ownerPhone,
     ownerEmail: h.ownerEmail,
     notes: h.notes,
-    cleaningFrequency: h.cleaningFrequency,
-    size: h.size,
     bedrooms: h.bedrooms,
     bathrooms: h.bathrooms,
     entryCode: h.entryCode,
@@ -54,9 +47,6 @@ router.get("/stats", requireAuth, async (req: any, res) => {
     const all = await db.select().from(housesTable);
     const active = all.filter((h) => h.status === "active").length;
     const inactive = all.filter((h) => h.status === "inactive").length;
-    const weekly = all.filter((h) => h.cleaningFrequency === "weekly").length;
-    const biweekly = all.filter((h) => h.cleaningFrequency === "biweekly").length;
-    const monthly = all.filter((h) => h.cleaningFrequency === "monthly").length;
     const todayAssignments = await db
       .select({ count: count() })
       .from(assignmentsTable)
@@ -65,9 +55,9 @@ router.get("/stats", requireAuth, async (req: any, res) => {
       total: all.length,
       active,
       inactive,
-      weekly,
-      biweekly,
-      monthly,
+      weekly: 0,
+      biweekly: 0,
+      monthly: 0,
       totalAssignmentsToday: todayAssignments[0]?.count ?? 0,
     });
   } catch (err) {

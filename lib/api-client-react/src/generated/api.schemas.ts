@@ -128,15 +128,6 @@ export interface UpdateAssignmentBody {
   priority?: UpdateAssignmentBodyPriority;
 }
 
-export type HouseCleaningFrequency =
-  (typeof HouseCleaningFrequency)[keyof typeof HouseCleaningFrequency];
-
-export const HouseCleaningFrequency = {
-  weekly: "weekly",
-  biweekly: "biweekly",
-  monthly: "monthly",
-} as const;
-
 export type HouseStatus = (typeof HouseStatus)[keyof typeof HouseStatus];
 
 export const HouseStatus = {
@@ -147,33 +138,17 @@ export const HouseStatus = {
 export interface House {
   id: number;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: number;
-  longitude: number;
+  mapLink?: string | null;
   ownerName: string;
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  cleaningFrequency: HouseCleaningFrequency;
-  size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
   status: HouseStatus;
   createdAt: string;
 }
-
-export type CreateHouseBodyCleaningFrequency =
-  (typeof CreateHouseBodyCleaningFrequency)[keyof typeof CreateHouseBodyCleaningFrequency];
-
-export const CreateHouseBodyCleaningFrequency = {
-  weekly: "weekly",
-  biweekly: "biweekly",
-  monthly: "monthly",
-} as const;
 
 export type CreateHouseBodyStatus =
   (typeof CreateHouseBodyStatus)[keyof typeof CreateHouseBodyStatus];
@@ -185,32 +160,16 @@ export const CreateHouseBodyStatus = {
 
 export interface CreateHouseBody {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: number;
-  longitude: number;
+  mapLink?: string | null;
   ownerName: string;
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  cleaningFrequency?: CreateHouseBodyCleaningFrequency;
-  size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
   status: CreateHouseBodyStatus;
 }
-
-export type UpdateHouseBodyCleaningFrequency =
-  (typeof UpdateHouseBodyCleaningFrequency)[keyof typeof UpdateHouseBodyCleaningFrequency];
-
-export const UpdateHouseBodyCleaningFrequency = {
-  weekly: "weekly",
-  biweekly: "biweekly",
-  monthly: "monthly",
-} as const;
 
 export type UpdateHouseBodyStatus =
   (typeof UpdateHouseBodyStatus)[keyof typeof UpdateHouseBodyStatus];
@@ -222,18 +181,11 @@ export const UpdateHouseBodyStatus = {
 
 export interface UpdateHouseBody {
   name?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  latitude?: number;
-  longitude?: number;
+  mapLink?: string | null;
   ownerName?: string;
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  cleaningFrequency?: UpdateHouseBodyCleaningFrequency;
-  size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;

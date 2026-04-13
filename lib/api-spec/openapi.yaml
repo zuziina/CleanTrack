@@ -454,20 +454,9 @@ components:
           type: integer
         name:
           type: string
-        address:
+        mapLink:
           type: string
-        city:
-          type: string
-        state:
-          type: string
-        zipCode:
-          type: string
-        latitude:
-          type: number
-          format: float
-        longitude:
-          type: number
-          format: float
+          nullable: true
         ownerName:
           type: string
         ownerPhone:
@@ -477,12 +466,6 @@ components:
           type: string
           nullable: true
         notes:
-          type: string
-          nullable: true
-        cleaningFrequency:
-          type: string
-          enum: [weekly, biweekly, monthly]
-        size:
           type: string
           nullable: true
         bedrooms:
@@ -502,14 +485,7 @@ components:
       required:
         - id
         - name
-        - address
-        - city
-        - state
-        - zipCode
-        - latitude
-        - longitude
         - ownerName
-        - cleaningFrequency
         - status
         - createdAt
 
@@ -518,20 +494,9 @@ components:
       properties:
         name:
           type: string
-        address:
+        mapLink:
           type: string
-        city:
-          type: string
-        state:
-          type: string
-        zipCode:
-          type: string
-        latitude:
-          type: number
-          format: float
-        longitude:
-          type: number
-          format: float
+          nullable: true
         ownerName:
           type: string
         ownerPhone:
@@ -541,12 +506,6 @@ components:
           type: string
           nullable: true
         notes:
-          type: string
-          nullable: true
-        cleaningFrequency:
-          type: string
-          enum: [weekly, biweekly, monthly]
-        size:
           type: string
           nullable: true
         bedrooms:
@@ -563,12 +522,6 @@ components:
           enum: [active, inactive]
       required:
         - name
-        - address
-        - city
-        - state
-        - zipCode
-        - latitude
-        - longitude
         - ownerName
         - status
 
@@ -577,20 +530,9 @@ components:
       properties:
         name:
           type: string
-        address:
+        mapLink:
           type: string
-        city:
-          type: string
-        state:
-          type: string
-        zipCode:
-          type: string
-        latitude:
-          type: number
-          format: float
-        longitude:
-          type: number
-          format: float
+          nullable: true
         ownerName:
           type: string
         ownerPhone:
@@ -600,12 +542,6 @@ components:
           type: string
           nullable: true
         notes:
-          type: string
-          nullable: true
-        cleaningFrequency:
-          type: string
-          enum: [weekly, biweekly, monthly]
-        size:
           type: string
           nullable: true
         bedrooms:

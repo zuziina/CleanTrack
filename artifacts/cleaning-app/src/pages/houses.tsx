@@ -37,8 +37,6 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
-  Navigation,
-  LocateFixed,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -53,187 +51,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-function mapsUrl(address: string, city: string, state: string, zip: string) {
-  const full = `${address}, ${city}, ${state} ${zip}`;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}`;
-}
-
-function coordsMapsUrl(lat: number, lng: number) {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-}
-
-function parseGoogleMapsLink(url: string): { lat: number; lng: number } | null {
-  try {
-    // Format: @lat,lng anywhere in the URL (most common share format)
-    const atMatch = url.match(/@(-?\d+\.?\d+),(-?\d+\.?\d+)/);
-    if (atMatch) {
-      const lat = parseFloat(atMatch[1]);
-      const lng = parseFloat(atMatch[2]);
-      if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
-    }
-
-    const u = new URL(url);
-
-    // Format: ?q=lat,lng or ?query=lat,lng
-    for (const key of ["q", "query", "ll"]) {
-      const val = u.searchParams.get(key);
-      if (val) {
-        const m = val.match(/^(-?\d+\.?\d+),(-?\d+\.?\d+)$/);
-        if (m) {
-          const lat = parseFloat(m[1]);
-          const lng = parseFloat(m[2]);
-          if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
-        }
-      }
-    }
-
-    // Format: /maps/place/Name/lat,lng (some desktop share links)
-    const placeMatch = url.match(/\/maps\/place\/[^/]+\/(-?\d+\.?\d+),(-?\d+\.?\d+)/);
-    if (placeMatch) {
-      const lat = parseFloat(placeMatch[1]);
-      const lng = parseFloat(placeMatch[2]);
-      if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function LocationPicker({
-  form,
-  set,
-}: {
-  form: { latitude: string; longitude: string };
-  set: (key: "latitude" | "longitude", val: string) => void;
-}) {
-  const [showInput, setShowInput] = useState(false);
-  const [pasteVal, setPasteVal] = useState("");
-  const [error, setError] = useState("");
-
-  const lat = parseFloat(form.latitude);
-  const lng = parseFloat(form.longitude);
-  const hasCoords = !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
-
-  const handleChange = (val: string) => {
-    setPasteVal(val);
-    setError("");
-    if (!val.trim()) return;
-
-    const coords = parseGoogleMapsLink(val.trim());
-    if (coords) {
-      set("latitude", String(coords.lat));
-      set("longitude", String(coords.lng));
-      setShowInput(false);
-      setPasteVal("");
-    } else if (val.includes("goo.gl") || val.includes("maps.app")) {
-      setError("Short links can't be parsed. In Google Maps tap Share → then choose 'Copy link' from the full URL option, or use the desktop site.");
-    } else {
-      setError("Couldn't find coordinates in this link. Make sure you copied a Google Maps link with a pin dropped.");
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      {hasCoords ? (
-        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <LocateFixed className="h-4 w-4 text-green-600 shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-green-800">Location set</p>
-              <p className="text-[11px] text-green-700 font-mono tabular-nums">
-                {lat.toFixed(5)}, {lng.toFixed(5)}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <a
-              href={coordsMapsUrl(lat, lng)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded transition-colors"
-            >
-              <ExternalLink className="h-3 w-3" /> Maps
-            </a>
-            <button
-              type="button"
-              onClick={() => setShowInput(true)}
-              className="text-xs text-muted-foreground hover:text-foreground underline"
-            >
-              Change
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-lg border border-dashed border-muted-foreground/30 p-3 text-center">
-          <Navigation className="h-5 w-5 text-muted-foreground/50 mx-auto mb-1.5" />
-          <p className="text-xs text-muted-foreground mb-2">No pin location set</p>
-          <button
-            type="button"
-            onClick={() => {
-              window.open("https://maps.google.com", "_blank");
-              setShowInput(true);
-            }}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors"
-          >
-            <Navigation className="h-3.5 w-3.5" /> Set location
-          </button>
-        </div>
-      )}
-
-      {showInput && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2.5">
-          <ol className="text-xs text-muted-foreground space-y-0.5 list-none">
-            <li>1. Open Google Maps and drop a pin on the location</li>
-            <li>2. Tap <span className="font-semibold">Share</span> → <span className="font-semibold">Copy link</span></li>
-            <li>3. Paste the link below</li>
-          </ol>
-          <div className="flex gap-2">
-            <a
-              href="https://maps.google.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary border border-primary/30 bg-white px-2.5 py-1.5 rounded transition-colors hover:bg-primary/5 whitespace-nowrap shrink-0"
-            >
-              <ExternalLink className="h-3 w-3" /> Open Maps
-            </a>
-            <Input
-              placeholder="Paste Google Maps link..."
-              value={pasteVal}
-              onChange={(e) => handleChange(e.target.value)}
-              className="flex-1 text-sm h-8"
-              autoFocus
-            />
-          </div>
-          {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded p-2 leading-relaxed">
-              {error}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => { setShowInput(false); setError(""); setPasteVal(""); }}
-            className="text-xs text-muted-foreground hover:text-foreground underline"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 type StatusValue = "active" | "inactive";
 
 interface HouseFormState {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: string;
-  longitude: string;
+  mapLink: string;
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
@@ -246,12 +68,7 @@ interface HouseFormState {
 
 const emptyForm = (): HouseFormState => ({
   name: "",
-  address: "",
-  city: "",
-  state: "",
-  zipCode: "",
-  latitude: "0",
-  longitude: "0",
+  mapLink: "",
   ownerName: "",
   ownerPhone: "",
   ownerEmail: "",
@@ -275,7 +92,6 @@ export default function HousesPage() {
   const filteredHouses = houses?.filter((h) => {
     const matchesSearch =
       h.name.toLowerCase().includes(search.toLowerCase()) ||
-      h.address.toLowerCase().includes(search.toLowerCase()) ||
       h.ownerName.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || h.status === statusFilter;
@@ -305,10 +121,7 @@ export default function HousesPage() {
           <div className="flex gap-2">
             {isManageMode ? (
               <>
-                <Button
-                  onClick={() => setShowAddModal(true)}
-                  className="gap-2"
-                >
+                <Button onClick={() => setShowAddModal(true)} className="gap-2">
                   <Plus className="h-4 w-4" /> Add Property
                 </Button>
                 <Button
@@ -378,7 +191,7 @@ export default function HousesPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search properties, addresses, owners..."
+              placeholder="Search properties or owners..."
               className="pl-9 bg-background border-border/50"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -413,7 +226,7 @@ export default function HousesPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-[200px] rounded-xl" />
+              <Skeleton key={i} className="h-[180px] rounded-xl" />
             ))}
           </div>
         ) : filteredHouses?.length === 0 ? (
@@ -470,7 +283,7 @@ export default function HousesPage() {
                         className={cn(
                           "capitalize shrink-0 mt-1",
                           house.status === "active"
-                            ? "text-green-600 bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900"
+                            ? "text-green-600 bg-green-50 border-green-200"
                             : "text-muted-foreground bg-muted"
                         )}
                       >
@@ -478,34 +291,33 @@ export default function HousesPage() {
                       </Badge>
                     </div>
 
-                    <a
-                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-start gap-2 text-sm text-foreground/80 bg-secondary/50 hover:bg-primary/10 hover:text-primary p-2.5 rounded-lg transition-colors group/addr"
-                    >
-                      <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                      <span className="leading-snug group-hover/addr:underline">
-                        {house.address}, {house.city}
-                      </span>
-                    </a>
+                    {house.mapLink ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(house.mapLink!, "_blank");
+                        }}
+                        className="flex items-center gap-2 text-sm text-primary bg-primary/10 hover:bg-primary/20 px-3 py-2 rounded-lg transition-colors w-full"
+                      >
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span className="font-medium">Open in Maps</span>
+                        <ExternalLink className="h-3 w-3 ml-auto shrink-0" />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground/50 italic px-3 py-2 bg-secondary/30 rounded-lg">
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        No location set
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                        <span
-                          className="flex items-center gap-1.5"
-                          title="Bedrooms"
-                        >
-                          <BedDouble className="h-4 w-4" />{" "}
-                          {house.bedrooms ?? "-"}
-                        </span>
-                        <span
-                          className="flex items-center gap-1.5"
-                          title="Bathrooms"
-                        >
-                          <Bath className="h-4 w-4" />{" "}
-                          {house.bathrooms ?? "-"}
-                        </span>
+                      <span className="flex items-center gap-1.5" title="Bedrooms">
+                        <BedDouble className="h-4 w-4" /> {house.bedrooms ?? "-"}
+                      </span>
+                      <span className="flex items-center gap-1.5" title="Bathrooms">
+                        <Bath className="h-4 w-4" /> {house.bathrooms ?? "-"}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -536,7 +348,7 @@ export default function HousesPage() {
   );
 }
 
-/* ── View Modal (detail, notes) ─────────────────────────────────────── */
+/* ── View Modal ─────────────────────────────────────────────────────── */
 
 function HouseDetailModal({
   houseId,
@@ -561,7 +373,7 @@ function HouseDetailModal({
       { id: houseId, data: { notes: notesValue } },
       {
         onSuccess: () => {
-          toast.success("Notes saved successfully");
+          toast.success("Notes saved");
           qc.setQueryData(getGetHouseQueryKey(houseId), (old: any) =>
             old ? { ...old, notes: notesValue } : old
           );
@@ -578,49 +390,35 @@ function HouseDetailModal({
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-2/3" />
             <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-1/2" />
             <Skeleton className="h-[200px] w-full mt-4" />
           </div>
         ) : (
           <>
             <div className="bg-primary/5 p-6 border-b border-border">
               <DialogHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <DialogTitle className="text-2xl font-bold text-foreground mb-1">
                       {house.name}
                     </DialogTitle>
-                    <a
-                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-base text-foreground/80 hover:text-primary transition-colors group/maplink"
-                    >
-                      <MapPin className="h-4 w-4 text-primary shrink-0" />
-                      <DialogDescription asChild>
-                        <span className="group-hover/maplink:underline">
-                          {house.address}, {house.city}, {house.state} {house.zipCode}
-                        </span>
-                      </DialogDescription>
-                    </a>
+                    <DialogDescription className="text-foreground/60">
+                      {house.ownerName}
+                    </DialogDescription>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <Badge className="capitalize text-sm px-3 py-1 bg-primary text-primary-foreground">
                       {house.status}
                     </Badge>
-                    <a
-                      href={
-                        house.latitude && house.longitude && (house.latitude !== 0 || house.longitude !== 0)
-                          ? coordsMapsUrl(house.latitude, house.longitude)
-                          : mapsUrl(house.address, house.city, house.state, house.zipCode)
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      Open in Maps
-                    </a>
+                    {house.mapLink && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(house.mapLink!, "_blank")}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        <MapPin className="h-3 w-3" />
+                        Open in Maps
+                      </button>
+                    )}
                   </div>
                 </div>
               </DialogHeader>
@@ -633,18 +431,12 @@ function HouseDetailModal({
                     Owner Details
                   </h4>
                   <div className="bg-secondary/30 rounded-lg p-3 space-y-2 border border-border/50">
-                    <p className="font-medium text-foreground">
-                      {house.ownerName}
-                    </p>
+                    <p className="font-medium text-foreground">{house.ownerName}</p>
                     {house.ownerPhone && (
-                      <p className="text-sm text-muted-foreground">
-                        {house.ownerPhone}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{house.ownerPhone}</p>
                     )}
                     {house.ownerEmail && (
-                      <p className="text-sm text-muted-foreground">
-                        {house.ownerEmail}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{house.ownerEmail}</p>
                     )}
                   </div>
                 </div>
@@ -656,21 +448,13 @@ function HouseDetailModal({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
                       <BedDouble className="h-5 w-5 mb-1 text-muted-foreground" />
-                      <span className="text-lg font-bold leading-none">
-                        {house.bedrooms ?? "-"}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">
-                        Beds
-                      </span>
+                      <span className="text-lg font-bold leading-none">{house.bedrooms ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Beds</span>
                     </div>
                     <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
                       <Bath className="h-5 w-5 mb-1 text-muted-foreground" />
-                      <span className="text-lg font-bold leading-none">
-                        {house.bathrooms ?? "-"}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">
-                        Baths
-                      </span>
+                      <span className="text-lg font-bold leading-none">{house.bathrooms ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Baths</span>
                     </div>
                     {house.entryCode && (
                       <div className="col-span-2 bg-card border border-border/50 rounded-lg p-3 flex items-center justify-between">
@@ -693,15 +477,12 @@ function HouseDetailModal({
                     <Textarea
                       value={notesValue}
                       onChange={(e) => setNotesValue(e.target.value)}
-                      placeholder="Add property access codes, special instructions, or cleaning preferences..."
-                      className="flex-1 min-h-[160px] resize-none bg-amber-50/50 dark:bg-amber-950/10 border-amber-200/50 dark:border-amber-900/50 focus-visible:ring-amber-500/30"
+                      placeholder="Add access codes, special instructions, or cleaning preferences..."
+                      className="flex-1 min-h-[160px] resize-none bg-amber-50/50 border-amber-200/50 focus-visible:ring-amber-500/30"
                     />
                     <Button
                       onClick={handleSaveNotes}
-                      disabled={
-                        updateNotes.isPending ||
-                        notesValue === (house.notes || "")
-                      }
+                      disabled={updateNotes.isPending || notesValue === (house.notes || "")}
                       className="w-full"
                     >
                       {updateNotes.isPending ? "Saving..." : "Save Notes"}
@@ -740,12 +521,7 @@ function EditHouseModal({
     if (house) {
       setForm({
         name: house.name,
-        address: house.address,
-        city: house.city,
-        state: house.state,
-        zipCode: house.zipCode,
-        latitude: String(house.latitude ?? 0),
-        longitude: String(house.longitude ?? 0),
+        mapLink: house.mapLink || "",
         ownerName: house.ownerName,
         ownerPhone: house.ownerPhone || "",
         ownerEmail: house.ownerEmail || "",
@@ -767,12 +543,7 @@ function EditHouseModal({
         id: houseId,
         data: {
           name: form.name,
-          address: form.address,
-          city: form.city,
-          state: form.state,
-          zipCode: form.zipCode,
-          latitude: parseFloat(form.latitude) || 0,
-          longitude: parseFloat(form.longitude) || 0,
+          mapLink: form.mapLink || null,
           ownerName: form.ownerName,
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
@@ -845,9 +616,7 @@ function EditHouseModal({
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Status">
                   <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">
                         <span className="flex items-center gap-2">
@@ -876,10 +645,26 @@ function EditHouseModal({
               </div>
             </Section>
 
-            <Section title="Address">
-              <Field label="Pin Location">
-                <LocationPicker form={form} set={set as (key: "latitude" | "longitude", val: string) => void} />
+            <Section title="Location">
+              <Field label="Google Maps Link">
+                <Input
+                  value={form.mapLink}
+                  onChange={(e) => set("mapLink", e.target.value)}
+                  placeholder="Paste any Google Maps link here"
+                />
               </Field>
+              <p className="text-xs text-muted-foreground px-1">
+                Open Google Maps, drop a pin, tap Share, copy link, paste here.
+              </p>
+              {form.mapLink && (
+                <button
+                  type="button"
+                  onClick={() => window.open(form.mapLink, "_blank")}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" /> Test link
+                </button>
+              )}
             </Section>
 
             <Section title="Owner Details">
@@ -926,12 +711,10 @@ function EditHouseModal({
             </Button>
           )}
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button
               onClick={handleSave}
-              disabled={updateHouse.isPending || !form.name || !form.address}
+              disabled={updateHouse.isPending || !form.name}
               className="min-w-[100px]"
             >
               {updateHouse.isPending ? "Saving..." : "Save Changes"}
@@ -958,12 +741,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
       {
         data: {
           name: form.name,
-          address: form.address,
-          city: form.city,
-          state: form.state,
-          zipCode: form.zipCode,
-          latitude: parseFloat(form.latitude) || 0,
-          longitude: parseFloat(form.longitude) || 0,
+          mapLink: form.mapLink || null,
           ownerName: form.ownerName,
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
@@ -1038,16 +816,26 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
             </div>
           </Section>
 
-          <Section title="Address">
-            <Field label="Street Address *">
-              <Input value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="e.g. 123 Main St" />
+          <Section title="Location">
+            <Field label="Google Maps Link">
+              <Input
+                value={form.mapLink}
+                onChange={(e) => set("mapLink", e.target.value)}
+                placeholder="Paste any Google Maps link here"
+              />
             </Field>
-            <Field label="State *">
-              <Input value={form.state} onChange={(e) => set("state", e.target.value)} maxLength={2} placeholder="TX" />
-            </Field>
-            <Field label="Pin Location">
-              <LocationPicker form={form} set={set as (key: "latitude" | "longitude", val: string) => void} />
-            </Field>
+            <p className="text-xs text-muted-foreground px-1">
+              Open Google Maps, drop a pin, tap Share, copy link, paste here.
+            </p>
+            {form.mapLink && (
+              <button
+                type="button"
+                onClick={() => window.open(form.mapLink, "_blank")}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" /> Test link
+              </button>
+            )}
           </Section>
 
           <Section title="Owner Details">
@@ -1075,18 +863,10 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-4 border-t border-border/50 flex justify-end gap-3 bg-[#fafaf9] shrink-0">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={handleCreate}
-            disabled={
-              createHouse.isPending ||
-              !form.name ||
-              !form.address ||
-              !form.state ||
-              !form.ownerName
-            }
+            disabled={createHouse.isPending || !form.name || !form.ownerName}
             className="min-w-[120px]"
           >
             {createHouse.isPending ? "Adding..." : "Add Property"}
@@ -1099,13 +879,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
 
 /* ── Small helpers ───────────────────────────────────────────────────── */
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1118,13 +892,7 @@ function Section({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-sm text-foreground/80">{label}</Label>

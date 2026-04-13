@@ -5,23 +5,15 @@
  * Cleaning company app API
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateHouseBodyCleaningFrequency } from "./createHouseBodyCleaningFrequency";
 import type { CreateHouseBodyStatus } from "./createHouseBodyStatus";
 
 export interface CreateHouseBody {
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: number;
-  longitude: number;
+  mapLink?: string | null;
   ownerName: string;
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  cleaningFrequency?: CreateHouseBodyCleaningFrequency;
-  size?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;

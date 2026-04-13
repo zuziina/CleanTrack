@@ -1,22 +1,15 @@
-import { pgTable, serial, text, real, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const housesTable = pgTable("houses", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  address: text("address").notNull(),
-  city: text("city").notNull(),
-  state: text("state").notNull(),
-  zipCode: text("zip_code").notNull(),
-  latitude: real("latitude").notNull(),
-  longitude: real("longitude").notNull(),
+  mapLink: text("map_link"),
   ownerName: text("owner_name").notNull(),
   ownerPhone: text("owner_phone"),
   ownerEmail: text("owner_email"),
   notes: text("notes"),
-  cleaningFrequency: text("cleaning_frequency").notNull().default("biweekly"),
-  size: text("size"),
   bedrooms: integer("bedrooms"),
   bathrooms: integer("bathrooms"),
   entryCode: text("entry_code"),

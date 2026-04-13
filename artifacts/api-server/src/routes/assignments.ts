@@ -50,7 +50,7 @@ async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect;
     id: r.assignments.id,
     houseId: r.assignments.houseId,
     houseName: r.houses.name,
-    houseAddress: `${r.houses.address}, ${r.houses.city}, ${r.houses.state}`,
+    houseAddress: r.houses.mapLink || "",
     assignedToClerkId: r.assignments.assignedToClerkId,
     assignedToUsername,
     date: r.assignments.date,
