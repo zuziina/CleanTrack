@@ -877,9 +877,6 @@ function EditHouseModal({
             </Section>
 
             <Section title="Address">
-              <Field label="Street Address">
-                <Input value={form.address} onChange={(e) => set("address", e.target.value)} />
-              </Field>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-1">
                   <Field label="City">
