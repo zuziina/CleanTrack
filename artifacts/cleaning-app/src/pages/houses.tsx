@@ -50,6 +50,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+function mapsUrl(address: string, city: string, state: string, zip: string) {
+  const full = `${address}, ${city}, ${state} ${zip}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}`;
+}
+
 type StatusValue = "active" | "inactive";
 
 interface HouseFormState {
@@ -304,12 +309,18 @@ export default function HousesPage() {
                       </Badge>
                     </div>
 
-                    <div className="flex items-start gap-2 text-sm text-foreground/80 bg-secondary/50 p-2.5 rounded-lg">
+                    <a
+                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-start gap-2 text-sm text-foreground/80 bg-secondary/50 hover:bg-primary/10 hover:text-primary p-2.5 rounded-lg transition-colors group/addr"
+                    >
                       <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                      <span className="leading-snug">
+                      <span className="leading-snug group-hover/addr:underline">
                         {house.address}, {house.city}
                       </span>
-                    </div>
+                    </a>
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
                         <span
@@ -406,19 +417,38 @@ function HouseDetailModal({
             <div className="bg-primary/5 p-6 border-b border-border">
               <DialogHeader>
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <DialogTitle className="text-2xl font-bold text-foreground mb-1">
                       {house.name}
                     </DialogTitle>
-                    <DialogDescription className="text-base text-foreground/80 flex items-center gap-1.5">
-                      <MapPin className="h-4 w-4 text-primary" />{" "}
-                      {house.address}, {house.city}, {house.state}{" "}
-                      {house.zipCode}
-                    </DialogDescription>
+                    <a
+                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-base text-foreground/80 hover:text-primary transition-colors group/maplink"
+                    >
+                      <MapPin className="h-4 w-4 text-primary shrink-0" />
+                      <DialogDescription asChild>
+                        <span className="group-hover/maplink:underline">
+                          {house.address}, {house.city}, {house.state} {house.zipCode}
+                        </span>
+                      </DialogDescription>
+                    </a>
                   </div>
-                  <Badge className="capitalize text-sm px-3 py-1 bg-primary text-primary-foreground">
-                    {house.status}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <Badge className="capitalize text-sm px-3 py-1 bg-primary text-primary-foreground">
+                      {house.status}
+                    </Badge>
+                    <a
+                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      Open in Maps
+                    </a>
+                  </div>
                 </div>
               </DialogHeader>
             </div>
