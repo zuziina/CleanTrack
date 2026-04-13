@@ -877,14 +877,9 @@ function EditHouseModal({
             </Section>
 
             <Section title="Address">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="State">
-                  <Input value={form.state} onChange={(e) => set("state", e.target.value)} maxLength={2} />
-                </Field>
-                <Field label="Zip Code">
-                  <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
-                </Field>
-              </div>
+              <Field label="Zip Code">
+                <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
+              </Field>
               <Field label="Pin Location">
                 <LocationPicker form={form} set={set as (key: "latitude" | "longitude", val: string) => void} />
               </Field>
