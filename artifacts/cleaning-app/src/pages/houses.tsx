@@ -877,9 +877,6 @@ function EditHouseModal({
             </Section>
 
             <Section title="Address">
-              <Field label="Zip Code">
-                <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
-              </Field>
               <Field label="Pin Location">
                 <LocationPicker form={form} set={set as (key: "latitude" | "longitude", val: string) => void} />
               </Field>
