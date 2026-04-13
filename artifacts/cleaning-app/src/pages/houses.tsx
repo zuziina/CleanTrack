@@ -380,12 +380,79 @@ function HouseDetailModal({
     query: { enabled: !!houseId, queryKey: getGetHouseQueryKey(houseId) },
   });
   const updateNotes = useUpdateHouseNotes();
+  const updateHouse = useUpdateHouse();
+  const deleteHouse = useDeleteHouse();
   const qc = useQueryClient();
+
   const [notesValue, setNotesValue] = useState("");
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [addrStreet, setAddrStreet] = useState("");
+  const [addrCity, setAddrCity] = useState("");
+  const [addrState, setAddrState] = useState("");
+  const [addrZip, setAddrZip] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (house?.notes) setNotesValue(house.notes);
   }, [house?.notes]);
+
+  const startEditAddress = () => {
+    if (!house) return;
+    setAddrStreet(house.address);
+    setAddrCity(house.city);
+    setAddrState(house.state);
+    setAddrZip(house.zipCode);
+    setEditingAddress(true);
+  };
+
+  const cancelEditAddress = () => {
+    setEditingAddress(false);
+  };
+
+  const saveAddress = () => {
+    if (!house || !addrStreet || !addrCity || !addrState || !addrZip) return;
+    updateHouse.mutate(
+      {
+        id: houseId,
+        data: {
+          name: house.name,
+          address: addrStreet,
+          city: addrCity,
+          state: addrState,
+          zipCode: addrZip,
+          latitude: house.latitude,
+          longitude: house.longitude,
+          ownerName: house.ownerName,
+          status: house.status as StatusValue,
+        },
+      },
+      {
+        onSuccess: (updated) => {
+          toast.success("Address updated");
+          qc.setQueryData(getGetHouseQueryKey(houseId), updated);
+          qc.invalidateQueries({ queryKey: getListHousesQueryKey() });
+          setEditingAddress(false);
+        },
+        onError: () => toast.error("Failed to update address"),
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    deleteHouse.mutate(
+      { id: houseId },
+      {
+        onSuccess: () => {
+          toast.success("Property deleted");
+          qc.invalidateQueries({ queryKey: getListHousesQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetHouseStatsQueryKey() });
+          onClose();
+        },
+        onError: () => toast.error("Failed to delete property"),
+      }
+    );
+  };
 
   const handleSaveNotes = () => {
     updateNotes.mutate(
@@ -403,7 +470,7 @@ function HouseDetailModal({
   };
 
   return (
-    <Dialog open={!!houseId} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!houseId} onOpenChange={(open) => { if (!open) { setEditingAddress(false); setConfirmDelete(false); onClose(); } }}>
       <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-[#fafaf9]">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
@@ -416,38 +483,104 @@ function HouseDetailModal({
           <>
             <div className="bg-primary/5 p-6 border-b border-border">
               <DialogHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <DialogTitle className="text-2xl font-bold text-foreground mb-1">
+                    <DialogTitle className="text-2xl font-bold text-foreground mb-2">
                       {house.name}
                     </DialogTitle>
-                    <a
-                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-base text-foreground/80 hover:text-primary transition-colors group/maplink"
-                    >
-                      <MapPin className="h-4 w-4 text-primary shrink-0" />
-                      <DialogDescription asChild>
-                        <span className="group-hover/maplink:underline">
-                          {house.address}, {house.city}, {house.state} {house.zipCode}
-                        </span>
-                      </DialogDescription>
-                    </a>
+
+                    {editingAddress ? (
+                      /* ── Inline address editor ── */
+                      <div className="space-y-2">
+                        <Input
+                          value={addrStreet}
+                          onChange={(e) => setAddrStreet(e.target.value)}
+                          placeholder="Street address"
+                          className="bg-white text-sm h-9"
+                          autoFocus
+                        />
+                        <div className="grid grid-cols-3 gap-2">
+                          <Input
+                            value={addrCity}
+                            onChange={(e) => setAddrCity(e.target.value)}
+                            placeholder="City"
+                            className="bg-white text-sm h-9 col-span-1"
+                          />
+                          <Input
+                            value={addrState}
+                            onChange={(e) => setAddrState(e.target.value)}
+                            placeholder="ST"
+                            maxLength={2}
+                            className="bg-white text-sm h-9 uppercase"
+                          />
+                          <Input
+                            value={addrZip}
+                            onChange={(e) => setAddrZip(e.target.value)}
+                            placeholder="Zip"
+                            className="bg-white text-sm h-9"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            onClick={saveAddress}
+                            disabled={updateHouse.isPending || !addrStreet || !addrCity || !addrState || !addrZip}
+                            className="h-8 px-3 text-xs"
+                          >
+                            {updateHouse.isPending ? "Saving…" : "Save address"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={cancelEditAddress}
+                            className="h-8 px-3 text-xs text-muted-foreground"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Address display ── */
+                      <div className="flex items-start gap-2">
+                        <a
+                          href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm text-foreground/80 hover:text-primary transition-colors group/maplink flex-1 min-w-0"
+                        >
+                          <MapPin className="h-4 w-4 text-primary shrink-0" />
+                          <DialogDescription asChild>
+                            <span className="group-hover/maplink:underline truncate">
+                              {house.address}, {house.city}, {house.state} {house.zipCode}
+                            </span>
+                          </DialogDescription>
+                        </a>
+                        <button
+                          onClick={startEditAddress}
+                          title="Edit address"
+                          className="shrink-0 p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
+
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <Badge className="capitalize text-sm px-3 py-1 bg-primary text-primary-foreground">
                       {house.status}
                     </Badge>
-                    <a
-                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      Open in Maps
-                    </a>
+                    {!editingAddress && (
+                      <a
+                        href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        <MapPin className="h-3 w-3" />
+                        Open in Maps
+                      </a>
+                    )}
                   </div>
                 </div>
               </DialogHeader>
@@ -535,6 +668,36 @@ function HouseDetailModal({
                     </Button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Delete zone */}
+            <div className="px-6 pb-5 flex items-center justify-between border-t border-border/40 pt-4">
+              <span className="text-xs text-muted-foreground">Property ID #{house.id}</span>
+              <div className="flex items-center gap-2">
+                {confirmDelete && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmDelete(false)}
+                    className="h-8 text-xs text-muted-foreground"
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDelete}
+                  disabled={deleteHouse.isPending}
+                  className={cn(
+                    "h-8 text-xs gap-1.5 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600",
+                    confirmDelete && "bg-red-600 text-white border-red-600 hover:bg-red-700 hover:text-white"
+                  )}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {confirmDelete ? "Confirm delete" : "Delete property"}
+                </Button>
               </div>
             </div>
           </>
