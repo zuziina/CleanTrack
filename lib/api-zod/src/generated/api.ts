@@ -195,6 +195,7 @@ export const ListHousesResponseItem = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
+  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });
@@ -220,6 +221,7 @@ export const CreateHouseBody = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
+  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
 });
 
@@ -248,6 +250,7 @@ export const GetHouseResponse = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
+  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });
@@ -276,6 +279,7 @@ export const UpdateHouseBody = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
+  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]).optional(),
 });
 
@@ -297,6 +301,7 @@ export const UpdateHouseResponse = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
+  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });
@@ -337,6 +342,7 @@ export const UpdateHouseNotesResponse = zod.object({
   bedrooms: zod.number().nullish(),
   bathrooms: zod.number().nullish(),
   entryCode: zod.string().nullish(),
+  mapsLink: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
 });

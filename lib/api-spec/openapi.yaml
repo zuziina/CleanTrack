@@ -494,6 +494,9 @@ components:
         entryCode:
           type: string
           nullable: true
+        mapsLink:
+          type: string
+          nullable: true
         status:
           type: string
           enum: [active, inactive]
@@ -558,6 +561,9 @@ components:
         entryCode:
           type: string
           nullable: true
+        mapsLink:
+          type: string
+          nullable: true
         status:
           type: string
           enum: [active, inactive]
@@ -615,6 +621,9 @@ components:
           type: integer
           nullable: true
         entryCode:
+          type: string
+          nullable: true
+        mapsLink:
           type: string
           nullable: true
         status:

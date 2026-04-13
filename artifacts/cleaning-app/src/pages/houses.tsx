@@ -55,6 +55,41 @@ function mapsUrl(address: string, city: string, state: string, zip: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}`;
 }
 
+function parseMapsUrl(url: string): { display: string | null; lat: number | null; lng: number | null } {
+  try {
+    const u = new URL(url);
+    const query = u.searchParams.get("query");
+    if (query) return { display: decodeURIComponent(query), lat: null, lng: null };
+    const placeCoord = u.pathname.match(/\/place\/([^/@]+)\/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (placeCoord) {
+      return {
+        display: decodeURIComponent(placeCoord[1].replace(/\+/g, " ")),
+        lat: parseFloat(placeCoord[2]),
+        lng: parseFloat(placeCoord[3]),
+      };
+    }
+    const placeOnly = u.pathname.match(/\/place\/([^/@]+)/);
+    if (placeOnly) {
+      return { display: decodeURIComponent(placeOnly[1].replace(/\+/g, " ")), lat: null, lng: null };
+    }
+    const coord = u.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (coord) return { display: null, lat: parseFloat(coord[1]), lng: parseFloat(coord[2]) };
+  } catch {}
+  return { display: null, lat: null, lng: null };
+}
+
+function getAddressDisplay(house: { address: string; city: string; state: string; zipCode: string; mapsLink?: string | null }): string {
+  if (house.mapsLink) {
+    const parsed = parseMapsUrl(house.mapsLink);
+    if (parsed.display) return parsed.display;
+  }
+  return `${house.address}, ${house.city}, ${house.state} ${house.zipCode}`;
+}
+
+function getOpenMapsHref(house: { address: string; city: string; state: string; zipCode: string; mapsLink?: string | null }): string {
+  return house.mapsLink || mapsUrl(house.address, house.city, house.state, house.zipCode);
+}
+
 type StatusValue = "active" | "inactive";
 
 interface HouseFormState {
@@ -310,7 +345,7 @@ export default function HousesPage() {
                     </div>
 
                     <a
-                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                      href={getOpenMapsHref(house)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -318,7 +353,7 @@ export default function HousesPage() {
                     >
                       <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
                       <span className="leading-snug group-hover/addr:underline">
-                        {house.address}, {house.city}
+                        {getAddressDisplay(house)}
                       </span>
                     </a>
 
@@ -386,22 +421,18 @@ function HouseDetailModal({
 
   const [notesValue, setNotesValue] = useState("");
   const [editingAddress, setEditingAddress] = useState(false);
-  const [addrStreet, setAddrStreet] = useState("");
-  const [addrCity, setAddrCity] = useState("");
-  const [addrState, setAddrState] = useState("");
-  const [addrZip, setAddrZip] = useState("");
+  const [addrMapsLink, setAddrMapsLink] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (house?.notes) setNotesValue(house.notes);
   }, [house?.notes]);
 
+  const parsedPreview = addrMapsLink ? parseMapsUrl(addrMapsLink) : null;
+
   const startEditAddress = () => {
     if (!house) return;
-    setAddrStreet(house.address);
-    setAddrCity(house.city);
-    setAddrState(house.state);
-    setAddrZip(house.zipCode);
+    setAddrMapsLink(house.mapsLink || "");
     setEditingAddress(true);
   };
 
@@ -410,30 +441,32 @@ function HouseDetailModal({
   };
 
   const saveAddress = () => {
-    if (!house || !addrStreet || !addrCity || !addrState || !addrZip) return;
+    if (!house || !addrMapsLink.trim()) return;
+    const parsed = parseMapsUrl(addrMapsLink.trim());
     updateHouse.mutate(
       {
         id: houseId,
         data: {
           name: house.name,
-          address: addrStreet,
-          city: addrCity,
-          state: addrState,
-          zipCode: addrZip,
-          latitude: house.latitude,
-          longitude: house.longitude,
+          address: parsed.display || house.address,
+          city: house.city,
+          state: house.state,
+          zipCode: house.zipCode,
+          latitude: parsed.lat ?? house.latitude,
+          longitude: parsed.lng ?? house.longitude,
           ownerName: house.ownerName,
           status: house.status as StatusValue,
+          mapsLink: addrMapsLink.trim(),
         },
       },
       {
         onSuccess: (updated) => {
-          toast.success("Address updated");
+          toast.success("Location updated");
           qc.setQueryData(getGetHouseQueryKey(houseId), updated);
           qc.invalidateQueries({ queryKey: getListHousesQueryKey() });
           setEditingAddress(false);
         },
-        onError: () => toast.error("Failed to update address"),
+        onError: () => toast.error("Failed to update location"),
       }
     );
   };
@@ -493,41 +526,28 @@ function HouseDetailModal({
                       /* ── Inline address editor ── */
                       <div className="space-y-2">
                         <Input
-                          value={addrStreet}
-                          onChange={(e) => setAddrStreet(e.target.value)}
-                          placeholder="Street address"
+                          value={addrMapsLink}
+                          onChange={(e) => setAddrMapsLink(e.target.value)}
+                          placeholder="Paste a Google Maps link…"
                           className="bg-white text-sm h-9"
                           autoFocus
                         />
-                        <div className="grid grid-cols-3 gap-2">
-                          <Input
-                            value={addrCity}
-                            onChange={(e) => setAddrCity(e.target.value)}
-                            placeholder="City"
-                            className="bg-white text-sm h-9 col-span-1"
-                          />
-                          <Input
-                            value={addrState}
-                            onChange={(e) => setAddrState(e.target.value)}
-                            placeholder="ST"
-                            maxLength={2}
-                            className="bg-white text-sm h-9 uppercase"
-                          />
-                          <Input
-                            value={addrZip}
-                            onChange={(e) => setAddrZip(e.target.value)}
-                            placeholder="Zip"
-                            className="bg-white text-sm h-9"
-                          />
-                        </div>
+                        {parsedPreview?.display && (
+                          <p className="text-xs text-muted-foreground px-1">
+                            Will show as: <span className="font-medium text-foreground">{parsedPreview.display}</span>
+                          </p>
+                        )}
+                        {addrMapsLink && !parsedPreview?.display && (
+                          <p className="text-xs text-amber-600 px-1">Address text not detected — link will still work for navigation.</p>
+                        )}
                         <div className="flex gap-2 pt-1">
                           <Button
                             size="sm"
                             onClick={saveAddress}
-                            disabled={updateHouse.isPending || !addrStreet || !addrCity || !addrState || !addrZip}
+                            disabled={updateHouse.isPending || !addrMapsLink.trim()}
                             className="h-8 px-3 text-xs"
                           >
-                            {updateHouse.isPending ? "Saving…" : "Save address"}
+                            {updateHouse.isPending ? "Saving…" : "Save location"}
                           </Button>
                           <Button
                             size="sm"
@@ -543,7 +563,7 @@ function HouseDetailModal({
                       /* ── Address display ── */
                       <div className="flex items-start gap-2">
                         <a
-                          href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                          href={getOpenMapsHref(house)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-sm text-foreground/80 hover:text-primary transition-colors group/maplink flex-1 min-w-0"
@@ -551,13 +571,13 @@ function HouseDetailModal({
                           <MapPin className="h-4 w-4 text-primary shrink-0" />
                           <DialogDescription asChild>
                             <span className="group-hover/maplink:underline truncate">
-                              {house.address}, {house.city}, {house.state} {house.zipCode}
+                              {getAddressDisplay(house)}
                             </span>
                           </DialogDescription>
                         </a>
                         <button
                           onClick={startEditAddress}
-                          title="Edit address"
+                          title="Edit location"
                           className="shrink-0 p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -572,7 +592,7 @@ function HouseDetailModal({
                     </Badge>
                     {!editingAddress && (
                       <a
-                        href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                        href={getOpenMapsHref(house)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"

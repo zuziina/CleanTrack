@@ -26,6 +26,7 @@ export interface House {
   bedrooms?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
+  mapsLink?: string | null;
   status: HouseStatus;
   createdAt: string;
 }

@@ -20,6 +20,7 @@ export const housesTable = pgTable("houses", {
   bedrooms: integer("bedrooms"),
   bathrooms: integer("bathrooms"),
   entryCode: text("entry_code"),
+  mapsLink: text("maps_link"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
