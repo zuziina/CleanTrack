@@ -280,12 +280,7 @@ export default function HousesPage() {
                       </div>
                       <Badge
                         variant="outline"
-                        className={cn(
-                          "capitalize shrink-0 mt-1",
-                          house.status === "active"
-                            ? "text-green-600 bg-green-50 border-green-200"
-                            : "text-muted-foreground bg-muted"
-                        )}
+                        className="whitespace-nowrap inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border [border-color:var(--badge-outline)] capitalize shrink-0 mt-1 text-green-600 bg-green-50 border-green-200 text-left pt-[0px]"
                       >
                         {house.status}
                       </Badge>
@@ -326,21 +321,18 @@ export default function HousesPage() {
           </div>
         )}
       </div>
-
       {!isManageMode && selectedHouseId && (
         <HouseDetailModal
           houseId={selectedHouseId}
           onClose={() => setSelectedHouseId(null)}
         />
       )}
-
       {isManageMode && editHouseId && (
         <EditHouseModal
           houseId={editHouseId}
           onClose={() => setEditHouseId(null)}
         />
       )}
-
       {isManageMode && showAddModal && (
         <AddHouseModal onClose={() => setShowAddModal(false)} />
       )}
