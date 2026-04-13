@@ -36,6 +36,9 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  ExternalLink,
+  Navigation,
+  LocateFixed,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -53,6 +56,172 @@ import { toast } from "sonner";
 function mapsUrl(address: string, city: string, state: string, zip: string) {
   const full = `${address}, ${city}, ${state} ${zip}`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}`;
+}
+
+function coordsMapsUrl(lat: number, lng: number) {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+function parseGoogleMapsLink(url: string): { lat: number; lng: number } | null {
+  try {
+    // Format: @lat,lng anywhere in the URL (most common share format)
+    const atMatch = url.match(/@(-?\d+\.?\d+),(-?\d+\.?\d+)/);
+    if (atMatch) {
+      const lat = parseFloat(atMatch[1]);
+      const lng = parseFloat(atMatch[2]);
+      if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+    }
+
+    const u = new URL(url);
+
+    // Format: ?q=lat,lng or ?query=lat,lng
+    for (const key of ["q", "query", "ll"]) {
+      const val = u.searchParams.get(key);
+      if (val) {
+        const m = val.match(/^(-?\d+\.?\d+),(-?\d+\.?\d+)$/);
+        if (m) {
+          const lat = parseFloat(m[1]);
+          const lng = parseFloat(m[2]);
+          if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+        }
+      }
+    }
+
+    // Format: /maps/place/Name/lat,lng (some desktop share links)
+    const placeMatch = url.match(/\/maps\/place\/[^/]+\/(-?\d+\.?\d+),(-?\d+\.?\d+)/);
+    if (placeMatch) {
+      const lat = parseFloat(placeMatch[1]);
+      const lng = parseFloat(placeMatch[2]);
+      if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function LocationPicker({
+  form,
+  set,
+}: {
+  form: { latitude: string; longitude: string };
+  set: (key: "latitude" | "longitude", val: string) => void;
+}) {
+  const [showInput, setShowInput] = useState(false);
+  const [pasteVal, setPasteVal] = useState("");
+  const [error, setError] = useState("");
+
+  const lat = parseFloat(form.latitude);
+  const lng = parseFloat(form.longitude);
+  const hasCoords = !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
+
+  const handleChange = (val: string) => {
+    setPasteVal(val);
+    setError("");
+    if (!val.trim()) return;
+
+    const coords = parseGoogleMapsLink(val.trim());
+    if (coords) {
+      set("latitude", String(coords.lat));
+      set("longitude", String(coords.lng));
+      setShowInput(false);
+      setPasteVal("");
+    } else if (val.includes("goo.gl") || val.includes("maps.app")) {
+      setError("Short links can't be parsed. In Google Maps tap Share → then choose 'Copy link' from the full URL option, or use the desktop site.");
+    } else {
+      setError("Couldn't find coordinates in this link. Make sure you copied a Google Maps link with a pin dropped.");
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {hasCoords ? (
+        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <LocateFixed className="h-4 w-4 text-green-600 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-green-800">Location set</p>
+              <p className="text-[11px] text-green-700 font-mono tabular-nums">
+                {lat.toFixed(5)}, {lng.toFixed(5)}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href={coordsMapsUrl(lat, lng)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" /> Maps
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowInput(true)}
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+            >
+              Change
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-muted-foreground/30 p-3 text-center">
+          <Navigation className="h-5 w-5 text-muted-foreground/50 mx-auto mb-1.5" />
+          <p className="text-xs text-muted-foreground mb-2">No pin location set</p>
+          <button
+            type="button"
+            onClick={() => {
+              window.open("https://maps.google.com", "_blank");
+              setShowInput(true);
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors"
+          >
+            <Navigation className="h-3.5 w-3.5" /> Set location
+          </button>
+        </div>
+      )}
+
+      {showInput && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2.5">
+          <ol className="text-xs text-muted-foreground space-y-0.5 list-none">
+            <li>1. Open Google Maps and drop a pin on the location</li>
+            <li>2. Tap <span className="font-semibold">Share</span> → <span className="font-semibold">Copy link</span></li>
+            <li>3. Paste the link below</li>
+          </ol>
+          <div className="flex gap-2">
+            <a
+              href="https://maps.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary border border-primary/30 bg-white px-2.5 py-1.5 rounded transition-colors hover:bg-primary/5 whitespace-nowrap shrink-0"
+            >
+              <ExternalLink className="h-3 w-3" /> Open Maps
+            </a>
+            <Input
+              placeholder="Paste Google Maps link..."
+              value={pasteVal}
+              onChange={(e) => handleChange(e.target.value)}
+              className="flex-1 text-sm h-8"
+              autoFocus
+            />
+          </div>
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded p-2 leading-relaxed">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => { setShowInput(false); setError(""); setPasteVal(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 type StatusValue = "active" | "inactive";
@@ -440,7 +609,11 @@ function HouseDetailModal({
                       {house.status}
                     </Badge>
                     <a
-                      href={mapsUrl(house.address, house.city, house.state, house.zipCode)}
+                      href={
+                        house.latitude && house.longitude && (house.latitude !== 0 || house.longitude !== 0)
+                          ? coordsMapsUrl(house.latitude, house.longitude)
+                          : mapsUrl(house.address, house.city, house.state, house.zipCode)
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
@@ -720,14 +893,9 @@ function EditHouseModal({
                   <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} />
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Latitude">
-                  <Input type="number" step="any" value={form.latitude} onChange={(e) => set("latitude", e.target.value)} />
-                </Field>
-                <Field label="Longitude">
-                  <Input type="number" step="any" value={form.longitude} onChange={(e) => set("longitude", e.target.value)} />
-                </Field>
-              </div>
+              <Field label="Pin Location">
+                <LocationPicker form={form} set={set as (key: "latitude" | "longitude", val: string) => void} />
+              </Field>
             </Section>
 
             <Section title="Owner Details">
@@ -903,14 +1071,9 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
                 <Input value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} placeholder="78701" />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Latitude">
-                <Input type="number" step="any" value={form.latitude} onChange={(e) => set("latitude", e.target.value)} placeholder="30.2672" />
-              </Field>
-              <Field label="Longitude">
-                <Input type="number" step="any" value={form.longitude} onChange={(e) => set("longitude", e.target.value)} placeholder="-97.7431" />
-              </Field>
-            </div>
+            <Field label="Pin Location">
+              <LocationPicker form={form} set={set as (key: "latitude" | "longitude", val: string) => void} />
+            </Field>
           </Section>
 
           <Section title="Owner Details">
