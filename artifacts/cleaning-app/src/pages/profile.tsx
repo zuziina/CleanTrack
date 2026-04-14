@@ -578,14 +578,14 @@ function AssignModal({
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>Property</Label>
-            <Select value={houseId} onValueChange={setHouseId} required>
+            <Select value={houseId} onValueChange={setHouseId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a property" />
               </SelectTrigger>
               <SelectContent>
-                {houses?.map((h: any) => (
-                  <SelectItem key={h.id} value={h.id.toString()}>
-                    {h.name} — {h.address}
+                {(houses ?? []).map((h: any) => (
+                  <SelectItem key={h.id} value={String(h.id)}>
+                    {h.name}
                   </SelectItem>
                 ))}
               </SelectContent>
