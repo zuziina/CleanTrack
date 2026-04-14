@@ -522,7 +522,7 @@ function AssignmentCard({
                   "border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30"
               )}
             >
-              {assignment.status.replace("_", " ")}
+              {assignment.status === "pending" ? "assigned" : assignment.status.replace("_", " ")}
             </Badge>
           </div>
         </CardContent>
