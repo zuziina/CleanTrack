@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { User, Home, Map as MapIcon, ClipboardList, LogOut } from "lucide-react";
+import { User, Home, ClipboardList, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClerk } from "@clerk/react";
 import { Button } from "./ui/button";
@@ -11,7 +11,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/profile", icon: User, label: "Profile" },
     { href: "/houses", icon: Home, label: "Houses" },
-    { href: "/map", icon: MapIcon, label: "Map" },
   ];
 
   return (
