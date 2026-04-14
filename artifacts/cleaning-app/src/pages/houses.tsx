@@ -313,11 +313,11 @@ export default function HousesPage() {
                     )}
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                      <span className="flex items-center gap-1.5" title="Single beds">
-                        <BedSingle className="h-4 w-4" />{house.singleBeds ?? "-"}
-                      </span>
                       <span className="flex items-center gap-1.5" title="Double beds">
                         <BedDouble className="h-4 w-4" />{house.doubleBeds ?? "-"}
+                      </span>
+                      <span className="flex items-center gap-1.5" title="Single beds">
+                        <BedSingle className="h-4 w-4" />{house.singleBeds ?? "-"}
                       </span>
                       <span className="flex items-center gap-1.5" title="Baby beds">
                         <Baby className="h-4 w-4" />{house.babyBeds ?? "-"}
