@@ -253,10 +253,15 @@ export default function HousesPage() {
               <Card
                 key={house.id}
                 className={cn(
-                  "overflow-hidden transition-colors cursor-pointer group relative",
+                  "overflow-hidden transition-colors cursor-pointer group relative border-2",
+                  house.status === "active"
+                    ? "border-green-400"
+                    : "border-gray-200",
                   isManageMode
-                    ? "hover:border-amber-400/70 ring-1 ring-amber-200/60"
-                    : "hover:border-primary/50"
+                    ? "ring-1 ring-amber-200/60 hover:border-amber-400"
+                    : house.status === "active"
+                      ? "hover:border-green-500"
+                      : "hover:border-gray-400"
                 )}
                 onClick={() => handleCardClick(house.id)}
               >
@@ -270,7 +275,7 @@ export default function HousesPage() {
                 <CardContent className="p-0">
                   <div className="p-5 space-y-4">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1 pr-8">
+                      <div className="space-y-1">
                         <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors truncate">
                           {house.name}
                         </h3>
@@ -284,12 +289,6 @@ export default function HousesPage() {
                           </p>
                         )}
                       </div>
-                      <Badge
-                        variant="outline"
-                        className="whitespace-nowrap inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border [border-color:var(--badge-outline)] capitalize shrink-0 mt-1 text-green-600 bg-green-50 border-green-200 text-left pt-[0px]"
-                      >
-                        {house.status}
-                      </Badge>
                     </div>
 
                     {house.mapLink ? (
