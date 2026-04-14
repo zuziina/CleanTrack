@@ -48,6 +48,8 @@ import {
   CheckCircle2,
   Timer,
   AlarmClock,
+  Waves,
+  Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
@@ -1443,7 +1445,7 @@ function AssignmentDetailModal({
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Property Specs
                   </h4>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
                       <BedDouble className="h-4 w-4 text-muted-foreground mb-1" />
                       <span className="text-base font-bold leading-none">{house.doubleBeds ?? "-"}</span>
@@ -1463,6 +1465,16 @@ function AssignmentDetailModal({
                       <Bath className="h-4 w-4 text-muted-foreground mb-1" />
                       <span className="text-base font-bold leading-none">{house.bathrooms ?? "-"}</span>
                       <span className="text-[9px] text-muted-foreground uppercase mt-1">Bath</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <Waves className="h-4 w-4 text-muted-foreground mb-1" />
+                      <span className="text-base font-bold leading-none">{house.jacuzzis ?? "-"}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase mt-1">Jcz</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <Flame className="h-4 w-4 text-muted-foreground mb-1" />
+                      <span className="text-base font-bold leading-none">{house.saunas ?? "-"}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase mt-1">Sauna</span>
                     </div>
                   </div>
                 </div>

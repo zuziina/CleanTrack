@@ -19,6 +19,8 @@ export interface House {
   doubleBeds?: number | null;
   babyBeds?: number | null;
   bathrooms?: number | null;
+  jacuzzis?: number | null;
+  saunas?: number | null;
   entryCode?: string | null;
   status: HouseStatus;
   createdAt: string;

@@ -31,6 +31,8 @@ import {
   BedSingle,
   BedDouble,
   Baby,
+  Waves,
+  Flame,
   Activity,
   CalendarDays,
   Pencil,
@@ -66,6 +68,8 @@ interface HouseFormState {
   doubleBeds: string;
   babyBeds: string;
   bathrooms: string;
+  jacuzzis: string;
+  saunas: string;
   entryCode: string;
   status: StatusValue;
 }
@@ -81,6 +85,8 @@ const emptyForm = (): HouseFormState => ({
   doubleBeds: "",
   babyBeds: "",
   bathrooms: "",
+  jacuzzis: "",
+  saunas: "",
   entryCode: "",
   status: "active",
 });
@@ -311,7 +317,7 @@ export default function HousesPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50 flex-wrap">
                       <span className="flex items-center gap-1.5" title="Double beds">
                         <BedDouble className="h-4 w-4" />{house.doubleBeds ?? "-"}
                       </span>
@@ -321,9 +327,19 @@ export default function HousesPage() {
                       <span className="flex items-center gap-1.5" title="Baby beds">
                         <Baby className="h-4 w-4" />{house.babyBeds ?? "-"}
                       </span>
-                      <span className="flex items-center gap-1.5 ml-auto" title="Bathrooms">
+                      <span className="flex items-center gap-1.5" title="Bathrooms">
                         <Bath className="h-4 w-4" />{house.bathrooms ?? "-"}
                       </span>
+                      {(house.jacuzzis ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5" title="Jacuzzis">
+                          <Waves className="h-4 w-4" />{house.jacuzzis}
+                        </span>
+                      )}
+                      {(house.saunas ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5 ml-auto" title="Saunas">
+                          <Flame className="h-4 w-4" />{house.saunas}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -466,8 +482,18 @@ function HouseDetailModal({
                       <span className="text-lg font-bold leading-none">{house.bathrooms ?? "-"}</span>
                       <span className="text-[10px] text-muted-foreground uppercase mt-1">Baths</span>
                     </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                      <Waves className="h-5 w-5 mb-1 text-muted-foreground" />
+                      <span className="text-lg font-bold leading-none">{house.jacuzzis ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Jacuzzis</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                      <Flame className="h-5 w-5 mb-1 text-muted-foreground" />
+                      <span className="text-lg font-bold leading-none">{house.saunas ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Saunas</span>
+                    </div>
                     {house.entryCode && (
-                      <div className="col-span-2 bg-card border border-border/50 rounded-lg p-3 flex items-center justify-between">
+                      <div className="col-span-3 bg-card border border-border/50 rounded-lg p-3 flex items-center justify-between">
                         <span className="text-sm font-medium">Entry Code</span>
                         <span className="font-mono font-semibold tracking-widest text-primary">
                           {house.entryCode}
@@ -540,6 +566,8 @@ function EditHouseModal({
         doubleBeds: house.doubleBeds != null ? String(house.doubleBeds) : "",
         babyBeds: house.babyBeds != null ? String(house.babyBeds) : "",
         bathrooms: house.bathrooms != null ? String(house.bathrooms) : "",
+        jacuzzis: house.jacuzzis != null ? String(house.jacuzzis) : "",
+        saunas: house.saunas != null ? String(house.saunas) : "",
         entryCode: house.entryCode || "",
         status: (house.status as StatusValue) || "active",
       });
@@ -564,6 +592,8 @@ function EditHouseModal({
           doubleBeds: form.doubleBeds ? parseInt(form.doubleBeds) : null,
           babyBeds: form.babyBeds ? parseInt(form.babyBeds) : null,
           bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
+          jacuzzis: form.jacuzzis ? parseInt(form.jacuzzis) : null,
+          saunas: form.saunas ? parseInt(form.saunas) : null,
           entryCode: form.entryCode || null,
           status: form.status,
         },
@@ -663,9 +693,15 @@ function EditHouseModal({
                   <Input type="number" min="0" step="1" value={form.babyBeds} onChange={(e) => set("babyBeds", e.target.value)} placeholder="0" />
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Field label="Bathrooms">
-                  <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2" />
+                  <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="0" />
+                </Field>
+                <Field label="Jacuzzis">
+                  <Input type="number" min="0" step="1" value={form.jacuzzis} onChange={(e) => set("jacuzzis", e.target.value)} placeholder="0" />
+                </Field>
+                <Field label="Saunas">
+                  <Input type="number" min="0" step="1" value={form.saunas} onChange={(e) => set("saunas", e.target.value)} placeholder="0" />
                 </Field>
               </div>
             </Section>
@@ -795,6 +831,8 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           doubleBeds: form.doubleBeds ? parseInt(form.doubleBeds) : null,
           babyBeds: form.babyBeds ? parseInt(form.babyBeds) : null,
           bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
+          jacuzzis: form.jacuzzis ? parseInt(form.jacuzzis) : null,
+          saunas: form.saunas ? parseInt(form.saunas) : null,
           entryCode: form.entryCode || null,
           status: form.status,
         },
@@ -864,9 +902,15 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
                 <Input type="number" min="0" step="1" value={form.babyBeds} onChange={(e) => set("babyBeds", e.target.value)} placeholder="0" />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <Field label="Bathrooms">
-                <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2" />
+                <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="0" />
+              </Field>
+              <Field label="Jacuzzis">
+                <Input type="number" min="0" step="1" value={form.jacuzzis} onChange={(e) => set("jacuzzis", e.target.value)} placeholder="0" />
+              </Field>
+              <Field label="Saunas">
+                <Input type="number" min="0" step="1" value={form.saunas} onChange={(e) => set("saunas", e.target.value)} placeholder="0" />
               </Field>
             </div>
           </Section>

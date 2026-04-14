@@ -150,6 +150,8 @@ export interface House {
   doubleBeds?: number | null;
   babyBeds?: number | null;
   bathrooms?: number | null;
+  jacuzzis?: number | null;
+  saunas?: number | null;
   entryCode?: string | null;
   status: HouseStatus;
   createdAt: string;
@@ -174,6 +176,8 @@ export interface CreateHouseBody {
   doubleBeds?: number | null;
   babyBeds?: number | null;
   bathrooms?: number | null;
+  jacuzzis?: number | null;
+  saunas?: number | null;
   entryCode?: string | null;
   status: CreateHouseBodyStatus;
 }
@@ -197,6 +201,8 @@ export interface UpdateHouseBody {
   doubleBeds?: number | null;
   babyBeds?: number | null;
   bathrooms?: number | null;
+  jacuzzis?: number | null;
+  saunas?: number | null;
   entryCode?: string | null;
   status?: UpdateHouseBodyStatus;
 }

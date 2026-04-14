@@ -14,6 +14,8 @@ export const housesTable = pgTable("houses", {
   doubleBeds: integer("double_beds"),
   babyBeds: integer("baby_beds"),
   bathrooms: integer("bathrooms"),
+  jacuzzis: integer("jacuzzis"),
+  saunas: integer("saunas"),
   entryCode: text("entry_code"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
