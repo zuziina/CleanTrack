@@ -403,8 +403,10 @@ components:
           nullable: true
         date:
           type: string
+          nullable: true
         timeSlot:
           type: string
+          nullable: true
         notes:
           type: string
           nullable: true
@@ -419,8 +421,6 @@ components:
           enum: [low, normal, high]
       required:
         - houseId
-        - date
-        - timeSlot
         - status
         - priority
 

@@ -92,8 +92,8 @@ export const CreateAssignmentBodyPriority = {
 export interface CreateAssignmentBody {
   houseId: number;
   assignedToClerkId?: string | null;
-  date: string;
-  timeSlot: string;
+  date?: string | null;
+  timeSlot?: string | null;
   notes?: string | null;
   guestCount?: number | null;
   status: CreateAssignmentBodyStatus;

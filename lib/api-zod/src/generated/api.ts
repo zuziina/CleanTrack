@@ -81,8 +81,8 @@ export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem);
 export const CreateAssignmentBody = zod.object({
   houseId: zod.number(),
   assignedToClerkId: zod.string().nullish(),
-  date: zod.string(),
-  timeSlot: zod.string(),
+  date: zod.string().nullish(),
+  timeSlot: zod.string().nullish(),
   notes: zod.string().nullish(),
   guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),

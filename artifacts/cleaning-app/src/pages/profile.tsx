@@ -534,16 +534,16 @@ function AssignModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!houseId || !timeSlot || !date) return;
+    if (!houseId || !guestCount) return;
 
     createAssignment.mutate(
       {
         data: {
           houseId: parseInt(houseId, 10),
           assignedToClerkId: user.clerkId,
-          date,
-          timeSlot,
-          guestCount: guestCount ? parseInt(guestCount, 10) : undefined,
+          date: date || undefined,
+          timeSlot: timeSlot || undefined,
+          guestCount: parseInt(guestCount, 10),
           status: "pending",
           priority,
           notes: notes || undefined,
@@ -577,7 +577,7 @@ function AssignModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label>Property</Label>
+            <Label>Property *</Label>
             <Select value={houseId} onValueChange={setHouseId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a property" />
@@ -599,7 +599,6 @@ function AssignModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -608,14 +607,13 @@ function AssignModal({
                 placeholder="e.g. 9:00 – 11:00 AM"
                 value={timeSlot}
                 onChange={(e) => setTimeSlot(e.target.value)}
-                required
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Guests Today</Label>
+              <Label>Guests Today *</Label>
               <Input
                 type="number"
                 min="0"
@@ -652,7 +650,7 @@ function AssignModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createAssignment.isPending || !houseId || !timeSlot}>
+            <Button type="submit" disabled={createAssignment.isPending || !houseId || !guestCount}>
               {createAssignment.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -127,7 +127,13 @@ router.post("/", requireAuth, async (req: any, res) => {
       res.status(400).json({ error: "Invalid request body" });
       return;
     }
-    const [a] = await db.insert(assignmentsTable).values(parsed.data).returning();
+    const today = new Date().toISOString().split("T")[0];
+    const values = {
+      ...parsed.data,
+      date: parsed.data.date ?? today,
+      timeSlot: parsed.data.timeSlot ?? "",
+    };
+    const [a] = await db.insert(assignmentsTable).values(values).returning();
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
     if (!house) {
       res.status(404).json({ error: "House not found" });
