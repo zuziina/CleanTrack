@@ -3,10 +3,19 @@ import { User, Home, ClipboardList, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClerk } from "@clerk/react";
 import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
+import { useState } from "react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const navItems = [
     { href: "/profile", icon: User, label: "Profile" },
@@ -14,6 +23,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
+    <>
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card">
@@ -37,7 +47,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="p-4 border-t border-border">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={() => signOut()}>
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={() => setShowSignOutConfirm(true)}
+          >
             <LogOut size={20} className="mr-3" />
             Sign Out
           </Button>
@@ -54,7 +68,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-bold text-lg tracking-tight text-foreground">CleanTrack</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => signOut()}>
+          <Button variant="ghost" size="icon" onClick={() => setShowSignOutConfirm(true)}>
             <LogOut size={20} />
           </Button>
         </header>
@@ -81,5 +95,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
     </div>
+
+    {/* Sign-out confirmation dialog */}
+    <Dialog open={showSignOutConfirm} onOpenChange={(open) => !open && setShowSignOutConfirm(false)}>
+      <DialogContent className="sm:max-w-[360px] bg-[#fafaf9]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <LogOut className="h-5 w-5 text-muted-foreground" />
+            Sign out?
+          </DialogTitle>
+          <DialogDescription className="pt-1">
+            Are you sure you want to sign out of CleanTrack?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={() => setShowSignOutConfirm(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => signOut()} className="gap-2">
+            <LogOut className="h-4 w-4" />
+            Yes, sign out
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
