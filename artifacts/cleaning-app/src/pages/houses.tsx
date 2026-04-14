@@ -525,7 +525,7 @@ function EditHouseModal({
   const qc = useQueryClient();
 
   const [form, setForm] = useState<HouseFormState>(emptyForm());
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (house) {
@@ -581,11 +581,9 @@ function EditHouseModal({
     );
   };
 
-  const handleDelete = () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
+  const handleDelete = () => setShowDeleteConfirm(true);
+
+  const handleConfirmDelete = () => {
     deleteHouse.mutate(
       { id: houseId },
       {
@@ -593,14 +591,19 @@ function EditHouseModal({
           toast.success("Property deleted");
           qc.invalidateQueries({ queryKey: getListHousesQueryKey() });
           qc.invalidateQueries({ queryKey: getGetHouseStatsQueryKey() });
+          setShowDeleteConfirm(false);
           onClose();
         },
-        onError: () => toast.error("Failed to delete property"),
+        onError: () => {
+          toast.error("Failed to delete property");
+          setShowDeleteConfirm(false);
+        },
       }
     );
   };
 
   return (
+    <>
     <Dialog open={!!houseId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[640px] p-0 overflow-hidden bg-[#fafaf9] max-h-[90vh] flex flex-col">
         <div className="bg-amber-500/10 p-6 border-b border-amber-200/60 shrink-0">
@@ -718,20 +721,11 @@ function EditHouseModal({
           <Button
             variant="outline"
             onClick={handleDelete}
-            disabled={deleteHouse.isPending}
-            className={cn(
-              "gap-2 border-red-200 text-red-600 hover:bg-red-50",
-              confirmDelete && "bg-red-600 text-white hover:bg-red-700 border-red-600"
-            )}
+            className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
           >
             <Trash2 className="h-4 w-4" />
-            {confirmDelete ? "Confirm Delete" : "Delete"}
+            Delete
           </Button>
-          {confirmDelete && (
-            <Button variant="ghost" onClick={() => setConfirmDelete(false)} className="text-muted-foreground">
-              Cancel
-            </Button>
-          )}
           <div className="flex gap-2 ml-auto">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button
@@ -745,6 +739,35 @@ function EditHouseModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Delete confirmation dialog */}
+    <Dialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
+      <DialogContent className="sm:max-w-[400px] bg-[#fafaf9]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <Trash2 className="h-5 w-5" />
+            Delete Property?
+          </DialogTitle>
+          <DialogDescription className="pt-1">
+            This will permanently delete <span className="font-semibold text-foreground">{house?.name}</span> and all its information. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            disabled={deleteHouse.isPending}
+            className="bg-red-600 hover:bg-red-700 text-white gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleteHouse.isPending ? "Deleting..." : "Yes, delete it"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
