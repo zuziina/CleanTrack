@@ -222,12 +222,20 @@ function EmployeeDashboard() {
   );
 }
 
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Assigned", color: "bg-amber-100 text-amber-800 border-amber-300" },
+  { value: "in_progress", label: "In Progress", color: "bg-blue-100 text-blue-800 border-blue-300" },
+  { value: "completed", label: "Completed", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+] as const;
+
 function BossDashboard() {
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(today);
   const [weekRef, setWeekRef] = useState<Date>(today);
   const [assignTarget, setAssignTarget] = useState<any>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
+  const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
   const { data: users, isLoading: usersLoading } = useListUsers();
   const { data: allAssignments, isLoading: assignmentsLoading } = useListAssignments();
@@ -250,6 +258,16 @@ function BossDashboard() {
 
   const selectedDateStr = toDateString(selectedDate);
   const selectedAssignments = assignmentsByDate[selectedDateStr] ?? [];
+
+  const filteredAssignments = useMemo(() => {
+    return selectedAssignments.filter((a: any) => {
+      if (filterEmployee && a.assignedToClerkId !== filterEmployee) return false;
+      if (filterStatus && a.status !== filterStatus) return false;
+      return true;
+    });
+  }, [selectedAssignments, filterEmployee, filterStatus]);
+
+  const hasActiveFilter = filterEmployee !== null || filterStatus !== null;
 
   const formattedSelected = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
@@ -415,15 +433,116 @@ function BossDashboard() {
         </div>
 
         <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between border-b border-border/50 pb-3">
+          {/* Panel header */}
+          <div className="flex items-start justify-between border-b border-border/50 pb-3 gap-3">
             <div>
               <h3 className="text-base font-semibold tracking-tight">{formattedSelected}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {selectedAssignments.length} assignment{selectedAssignments.length !== 1 ? "s" : ""}
+                {filteredAssignments.length === selectedAssignments.length
+                  ? `${selectedAssignments.length} assignment${selectedAssignments.length !== 1 ? "s" : ""}`
+                  : `${filteredAssignments.length} of ${selectedAssignments.length} assignment${selectedAssignments.length !== 1 ? "s" : ""}`}
               </p>
             </div>
+            {hasActiveFilter && (
+              <button
+                onClick={() => { setFilterEmployee(null); setFilterStatus(null); }}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors underline-offset-2 hover:underline shrink-0 mt-0.5"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
 
+          {/* Filter bar */}
+          {selectedAssignments.length > 0 && (
+            <div className="space-y-2.5">
+              {/* Employee filter */}
+              {employees.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14 shrink-0">
+                    Employee
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => setFilterEmployee(null)}
+                      className={cn(
+                        "h-7 px-3 rounded-full text-xs font-medium border transition-all",
+                        filterEmployee === null
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                      )}
+                    >
+                      All
+                    </button>
+                    {employees.map((emp: any) => {
+                      const isActive = filterEmployee === emp.clerkId;
+                      const initial = (emp.username || emp.firstName || "?").charAt(0).toUpperCase();
+                      const name = emp.username || emp.firstName || "Unknown";
+                      return (
+                        <button
+                          key={emp.clerkId}
+                          onClick={() => setFilterEmployee(isActive ? null : emp.clerkId)}
+                          className={cn(
+                            "h-7 pl-1.5 pr-3 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5",
+                            isActive
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                          )}
+                        >
+                          <span className={cn(
+                            "h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0",
+                            isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                          )}>
+                            {initial}
+                          </span>
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Status filter */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14 shrink-0">
+                  Status
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => setFilterStatus(null)}
+                    className={cn(
+                      "h-7 px-3 rounded-full text-xs font-medium border transition-all",
+                      filterStatus === null
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                    )}
+                  >
+                    All
+                  </button>
+                  {STATUS_OPTIONS.map((opt) => {
+                    const isActive = filterStatus === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setFilterStatus(isActive ? null : opt.value)}
+                        className={cn(
+                          "h-7 px-3 rounded-full text-xs font-medium border transition-all",
+                          isActive
+                            ? opt.color + " border-current"
+                            : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Assignment list */}
           {assignmentsLoading ? (
             <div className="space-y-3">
               {[1, 2].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
@@ -438,9 +557,24 @@ function BossDashboard() {
                 <p className="text-sm mt-1">Click an employee and press Assign to add one</p>
               </CardContent>
             </Card>
+          ) : filteredAssignments.length === 0 ? (
+            <Card className="border-dashed border-2 bg-background/50">
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                <div className="bg-secondary p-3 rounded-full mb-3">
+                  <UserCheck className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground">No matches</p>
+                <p className="text-sm mt-1">
+                  <button onClick={() => { setFilterEmployee(null); setFilterStatus(null); }} className="underline hover:text-foreground transition-colors">
+                    Clear filters
+                  </button>{" "}
+                  to see all assignments
+                </p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-3">
-              {selectedAssignments.map((a: any) => (
+              {filteredAssignments.map((a: any) => (
                 <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
               ))}
             </div>
