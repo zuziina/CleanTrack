@@ -175,6 +175,8 @@ router.delete("/:id", requireAuth, async (req: any, res) => {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
+    // Delete linked assignments first to satisfy the foreign key constraint
+    await db.delete(assignmentsTable).where(eq(assignmentsTable.houseId, parsed.data.id));
     await db.delete(housesTable).where(eq(housesTable.id, parsed.data.id));
     res.status(204).send();
   } catch (err) {
