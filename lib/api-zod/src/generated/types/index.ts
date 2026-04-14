@@ -20,6 +20,7 @@ export * from "./healthStatus";
 export * from "./house";
 export * from "./houseStats";
 export * from "./houseStatus";
+export * from "./patchTimingBody";
 export * from "./setRoleBody";
 export * from "./setRoleBodyRole";
 export * from "./updateAssignmentBody";

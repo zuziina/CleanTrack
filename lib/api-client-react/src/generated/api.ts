@@ -24,6 +24,7 @@ import type {
   HealthStatus,
   House,
   HouseStats,
+  PatchTimingBody,
   SetRoleBody,
   UpdateAssignmentBody,
   UpdateHouseBody,
@@ -745,6 +746,93 @@ export const useDeleteAssignment = <
   TContext
 > => {
   return useMutation(getDeleteAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Manually adjust or clear the startedAt / finishedAt timestamps
+ */
+export const getPatchAssignmentTimingUrl = (id: number) => {
+  return `/api/assignments/${id}/timing`;
+};
+
+export const patchAssignmentTiming = async (
+  id: number,
+  patchTimingBody: PatchTimingBody,
+  options?: RequestInit,
+): Promise<Assignment> => {
+  return customFetch<Assignment>(getPatchAssignmentTimingUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(patchTimingBody),
+  });
+};
+
+export const getPatchAssignmentTimingMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchAssignmentTiming>>,
+    TError,
+    { id: number; data: BodyType<PatchTimingBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchAssignmentTiming>>,
+  TError,
+  { id: number; data: BodyType<PatchTimingBody> },
+  TContext
+> => {
+  const mutationKey = ["patchAssignmentTiming"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchAssignmentTiming>>,
+    { id: number; data: BodyType<PatchTimingBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return patchAssignmentTiming(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchAssignmentTimingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchAssignmentTiming>>
+>;
+export type PatchAssignmentTimingMutationBody = BodyType<PatchTimingBody>;
+export type PatchAssignmentTimingMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Manually adjust or clear the startedAt / finishedAt timestamps
+ */
+export const usePatchAssignmentTiming = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchAssignmentTiming>>,
+    TError,
+    { id: number; data: BodyType<PatchTimingBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof patchAssignmentTiming>>,
+  TError,
+  { id: number; data: BodyType<PatchTimingBody> },
+  TContext
+> => {
+  return useMutation(getPatchAssignmentTimingMutationOptions(options));
 };
 
 /**

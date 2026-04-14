@@ -160,6 +160,36 @@ export const DeleteAssignmentParams = zod.object({
 });
 
 /**
+ * @summary Manually adjust or clear the startedAt / finishedAt timestamps
+ */
+export const PatchAssignmentTimingParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const PatchAssignmentTimingBody = zod.object({
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+});
+
+export const PatchAssignmentTimingResponse = zod.object({
+  id: zod.number(),
+  houseId: zod.number(),
+  houseName: zod.string(),
+  houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
+  date: zod.string(),
+  timeSlot: zod.string(),
+  notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
+  status: zod.enum(["pending", "in_progress", "completed"]),
+  priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
  * @summary Mark cleaning as started (records startedAt timestamp)
  */
 export const StartCleaningParams = zod.object({

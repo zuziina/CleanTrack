@@ -204,6 +204,36 @@ router.put("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
+router.patch("/:id/timing", requireAuth, async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const { startedAt, finishedAt } = req.body as { startedAt?: string | null; finishedAt?: string | null };
+    const updates: Record<string, any> = {};
+    if ("startedAt" in req.body) {
+      updates.startedAt = startedAt ? new Date(startedAt) : null;
+    }
+    if ("finishedAt" in req.body) {
+      updates.finishedAt = finishedAt ? new Date(finishedAt) : null;
+    }
+    // Derive status from the resulting state
+    const [current] = await db.select().from(assignmentsTable).where(eq(assignmentsTable.id, id));
+    if (!current) { res.status(404).json({ error: "Assignment not found" }); return; }
+    const effectiveStartedAt = "startedAt" in updates ? updates.startedAt : current.startedAt;
+    const effectiveFinishedAt = "finishedAt" in updates ? updates.finishedAt : current.finishedAt;
+    const derivedStatus = !effectiveStartedAt ? "pending" : effectiveFinishedAt ? "completed" : "in_progress";
+    updates.status = derivedStatus;
+    const [a] = await db.update(assignmentsTable).set(updates).where(eq(assignmentsTable.id, id)).returning();
+    if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
+    const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
+    if (!house) { res.status(404).json({ error: "House not found" }); return; }
+    res.json(await formatRow({ assignments: a, houses: house }));
+  } catch (err) {
+    req.log.error({ err }, "Failed to patch timing");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/:id/start", requireAuth, async (req: any, res) => {
   try {
     const id = Number(req.params.id);

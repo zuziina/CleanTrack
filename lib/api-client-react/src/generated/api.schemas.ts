@@ -201,6 +201,11 @@ export interface UpdateHouseBody {
   status?: UpdateHouseBodyStatus;
 }
 
+export interface PatchTimingBody {
+  startedAt?: string | null;
+  finishedAt?: string | null;
+}
+
 export interface UpdateHouseNotesBody {
   notes: string | null;
 }

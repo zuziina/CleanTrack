@@ -164,6 +164,31 @@ paths:
         "204":
           description: Deleted
 
+  /assignments/{id}/timing:
+    patch:
+      operationId: patchAssignmentTiming
+      tags: [assignments]
+      summary: Manually adjust or clear the startedAt / finishedAt timestamps
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchTimingBody"
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assignment"
+
   /assignments/{id}/start:
     post:
       operationId: startCleaning
@@ -623,6 +648,16 @@ components:
         status:
           type: string
           enum: [active, inactive]
+
+    PatchTimingBody:
+      type: object
+      properties:
+        startedAt:
+          type: string
+          nullable: true
+        finishedAt:
+          type: string
+          nullable: true
 
     UpdateHouseNotesBody:
       type: object

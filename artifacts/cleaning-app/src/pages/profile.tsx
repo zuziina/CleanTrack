@@ -12,6 +12,7 @@ import {
   useUpdateHouseNotes,
   useStartCleaning,
   useFinishCleaning,
+  usePatchAssignmentTiming,
   getGetHouseQueryKey,
   getGetTodayAssignmentsQueryKey,
   getListAssignmentsQueryKey,
@@ -974,6 +975,18 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function toTimeInputValue(iso: string) {
+  const d = new Date(iso);
+  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+
+function buildIsoFromTimeInput(originalIso: string, timeValue: string) {
+  const d = new Date(originalIso);
+  const [h, m] = timeValue.split(":").map(Number);
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+}
+
 function AssignmentDetailModal({
   assignment: initialAssignment,
   onClose,
@@ -988,8 +1001,11 @@ function AssignmentDetailModal({
   const updateNotes = useUpdateHouseNotes();
   const startCleaning = useStartCleaning();
   const finishCleaning = useFinishCleaning();
+  const patchTiming = usePatchAssignmentTiming();
   const qc = useQueryClient();
   const [notesValue, setNotesValue] = useState("");
+  const [editingField, setEditingField] = useState<"startedAt" | "finishedAt" | null>(null);
+  const [editTimeValue, setEditTimeValue] = useState("");
 
   const elapsed = useLiveElapsed(assignment.startedAt ?? null, assignment.finishedAt ?? null);
 
@@ -1018,6 +1034,34 @@ function AssignmentDetailModal({
       onError: () => toast.error("Failed to finish cleaning"),
     });
   };
+
+  const applyTimingPatch = (data: { startedAt?: string | null; finishedAt?: string | null }) => {
+    patchTiming.mutate({ id: assignment.id, data }, {
+      onSuccess: (updated) => {
+        setAssignment(updated);
+        setEditingField(null);
+        qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      },
+      onError: () => toast.error("Failed to update time"),
+    });
+  };
+
+  const openEdit = (field: "startedAt" | "finishedAt") => {
+    const iso = field === "startedAt" ? assignment.startedAt : assignment.finishedAt;
+    setEditTimeValue(iso ? toTimeInputValue(iso) : toTimeInputValue(new Date().toISOString()));
+    setEditingField(field);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingField || !editTimeValue) return;
+    const originalIso = editingField === "startedAt" ? assignment.startedAt : assignment.finishedAt;
+    const base = originalIso ?? new Date().toISOString();
+    applyTimingPatch({ [editingField]: buildIsoFromTimeInput(base, editTimeValue) });
+  };
+
+  const handleUndoStart = () => applyTimingPatch({ startedAt: null, finishedAt: null });
+  const handleUndoFinish = () => applyTimingPatch({ finishedAt: null });
 
   const handleSaveNotes = () => {
     updateNotes.mutate(
@@ -1113,11 +1157,7 @@ function AssignmentDetailModal({
                     onClick={handleStart}
                     disabled={startCleaning.isPending}
                   >
-                    {startCleaning.isPending ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <PlayCircle className="h-5 w-5" />
-                    )}
+                    {startCleaning.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <PlayCircle className="h-5 w-5" />}
                     Start Cleaning
                   </Button>
                 </div>
@@ -1125,15 +1165,38 @@ function AssignmentDetailModal({
 
               {inProgress && (
                 <div className="flex flex-col items-center gap-3 py-1">
+                  {/* Start time row */}
                   <div className="flex items-center gap-2 text-amber-700">
-                    <Timer className="h-4 w-4 animate-pulse" />
-                    <span className="text-sm font-medium">
-                      Started at {formatTime(assignment.startedAt)} — cleaning in progress
-                    </span>
+                    <Timer className="h-4 w-4 animate-pulse shrink-0" />
+                    {editingField === "startedAt" ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          value={editTimeValue}
+                          onChange={(e) => setEditTimeValue(e.target.value)}
+                          className="border border-amber-300 rounded-md px-2 py-1 text-sm bg-white text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                        <button onClick={handleSaveEdit} disabled={patchTiming.isPending} className="text-xs font-semibold text-primary hover:underline disabled:opacity-50">
+                          {patchTiming.isPending ? "Saving…" : "Save"}
+                        </button>
+                        <button onClick={() => setEditingField(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-medium flex items-center gap-1.5">
+                        Started at {formatTime(assignment.startedAt)}
+                        <button onClick={() => openEdit("startedAt")} className="text-amber-500 hover:text-amber-700 transition-colors" title="Adjust start time">
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )}
                   </div>
+
+                  {/* Live timer */}
                   <div className="text-4xl font-bold font-mono tabular-nums text-amber-700">
                     {formatDuration(elapsed)}
                   </div>
+
+                  {/* Finish button */}
                   <Button
                     size="lg"
                     variant="outline"
@@ -1141,34 +1204,99 @@ function AssignmentDetailModal({
                     onClick={handleFinish}
                     disabled={finishCleaning.isPending}
                   >
-                    {finishCleaning.isPending ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-5 w-5" />
-                    )}
+                    {finishCleaning.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
                     Finish Cleaning
                   </Button>
+
+                  {/* Undo start */}
+                  <button
+                    onClick={handleUndoStart}
+                    disabled={patchTiming.isPending}
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    Undo start
+                  </button>
                 </div>
               )}
 
               {done && (
-                <div className="flex flex-col items-center gap-2 py-1">
+                <div className="flex flex-col items-center gap-3 py-1">
                   <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                   <p className="font-semibold text-emerald-700 text-base">Cleaning Complete</p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
-                      <AlarmClock className="h-3.5 w-3.5" />
-                      Started: {formatTime(assignment.startedAt)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Finished: {formatTime(assignment.finishedAt)}
-                    </span>
+
+                  {/* Start / finish time rows */}
+                  <div className="w-full max-w-xs space-y-2">
+                    {/* Started row */}
+                    <div className="flex items-center justify-between bg-white/60 rounded-lg px-3 py-2 border border-emerald-200">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <AlarmClock className="h-3.5 w-3.5 text-emerald-600" /> Started
+                      </span>
+                      {editingField === "startedAt" ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={editTimeValue}
+                            onChange={(e) => setEditTimeValue(e.target.value)}
+                            className="border border-emerald-300 rounded px-1.5 py-0.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                          />
+                          <button onClick={handleSaveEdit} disabled={patchTiming.isPending} className="text-xs font-semibold text-primary hover:underline disabled:opacity-50">
+                            {patchTiming.isPending ? "…" : "Save"}
+                          </button>
+                          <button onClick={() => setEditingField(null)} className="text-xs text-muted-foreground hover:underline">✕</button>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          {formatTime(assignment.startedAt)}
+                          <button onClick={() => openEdit("startedAt")} className="text-emerald-500 hover:text-emerald-700 transition-colors" title="Adjust start time">
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Finished row */}
+                    <div className="flex items-center justify-between bg-white/60 rounded-lg px-3 py-2 border border-emerald-200">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Finished
+                      </span>
+                      {editingField === "finishedAt" ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            value={editTimeValue}
+                            onChange={(e) => setEditTimeValue(e.target.value)}
+                            className="border border-emerald-300 rounded px-1.5 py-0.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                          />
+                          <button onClick={handleSaveEdit} disabled={patchTiming.isPending} className="text-xs font-semibold text-primary hover:underline disabled:opacity-50">
+                            {patchTiming.isPending ? "…" : "Save"}
+                          </button>
+                          <button onClick={() => setEditingField(null)} className="text-xs text-muted-foreground hover:underline">✕</button>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          {formatTime(assignment.finishedAt)}
+                          <button onClick={() => openEdit("finishedAt")} className="text-emerald-500 hover:text-emerald-700 transition-colors" title="Adjust finish time">
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-1 bg-emerald-100 border border-emerald-200 rounded-full px-4 py-1 text-emerald-800 font-semibold text-sm flex items-center gap-1.5">
+
+                  {/* Duration pill */}
+                  <div className="bg-emerald-100 border border-emerald-200 rounded-full px-4 py-1 text-emerald-800 font-semibold text-sm flex items-center gap-1.5">
                     <Timer className="h-3.5 w-3.5" />
                     Total: {formatDuration(elapsed)}
                   </div>
+
+                  {/* Undo finish */}
+                  <button
+                    onClick={handleUndoFinish}
+                    disabled={patchTiming.isPending}
+                    className="text-xs text-muted-foreground hover:text-destructive transition-colors underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    Undo finish
+                  </button>
                 </div>
               )}
             </div>
