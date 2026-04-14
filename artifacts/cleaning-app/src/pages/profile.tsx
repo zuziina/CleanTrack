@@ -8,6 +8,9 @@ import {
   useCreateAssignment,
   useUpdateAssignment,
   useDeleteAssignment,
+  useGetHouse,
+  useUpdateHouseNotes,
+  getGetHouseQueryKey,
   getGetTodayAssignmentsQueryKey,
   getListAssignmentsQueryKey,
 } from "@workspace/api-client-react";
@@ -30,6 +33,14 @@ import {
   UserCheck,
   Pencil,
   Trash2,
+  BedDouble,
+  BedSingle,
+  Baby,
+  Bath,
+  ExternalLink,
+  Phone,
+  Mail,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -140,6 +151,7 @@ export default function ProfilePage() {
 function EmployeeDashboard() {
   const today = new Date();
   const { data: assignments, isLoading } = useGetTodayAssignments();
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
 
   const formatted = today.toLocaleDateString("en-US", {
     weekday: "long",
@@ -188,9 +200,16 @@ function EmployeeDashboard() {
       ) : (
         <div className="space-y-4">
           {assignments?.map((a) => (
-            <AssignmentCard key={a.id} assignment={a} />
+            <AssignmentCard key={a.id} assignment={a} onClick={() => setSelectedAssignment(a)} />
           ))}
         </div>
+      )}
+
+      {selectedAssignment && (
+        <AssignmentDetailModal
+          assignment={selectedAssignment}
+          onClose={() => setSelectedAssignment(null)}
+        />
       )}
     </div>
   );
@@ -444,13 +463,21 @@ function AssignmentCard({
   assignment,
   showAssignee = false,
   onEdit,
+  onClick,
 }: {
   assignment: any;
   showAssignee?: boolean;
   onEdit?: () => void;
+  onClick?: () => void;
 }) {
   return (
-    <Card className="overflow-hidden border-border/50 hover:shadow-sm transition-shadow">
+    <Card
+      className={cn(
+        "overflow-hidden border-border/50 transition-shadow",
+        onClick ? "cursor-pointer hover:shadow-md hover:border-primary/30" : "hover:shadow-sm"
+      )}
+      onClick={onClick}
+    >
       <div className="flex">
         <div
           className={cn(
@@ -882,5 +909,202 @@ function EditAssignmentModal({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function AssignmentDetailModal({
+  assignment,
+  onClose,
+}: {
+  assignment: any;
+  onClose: () => void;
+}) {
+  const { data: house, isLoading } = useGetHouse(assignment.houseId, {
+    query: { enabled: !!assignment.houseId, queryKey: getGetHouseQueryKey(assignment.houseId) },
+  });
+  const updateNotes = useUpdateHouseNotes();
+  const qc = useQueryClient();
+  const [notesValue, setNotesValue] = useState("");
+
+  useEffect(() => {
+    if (house?.notes != null) setNotesValue(house.notes);
+  }, [house?.notes]);
+
+  const handleSaveNotes = () => {
+    updateNotes.mutate(
+      { id: assignment.houseId, data: { notes: notesValue } },
+      {
+        onSuccess: () => {
+          toast.success("Notes saved");
+          qc.setQueryData(getGetHouseQueryKey(assignment.houseId), (old: any) =>
+            old ? { ...old, notes: notesValue } : old
+          );
+        },
+        onError: () => toast.error("Failed to save notes"),
+      }
+    );
+  };
+
+  const priorityColor =
+    assignment.priority === "high"
+      ? "text-red-600 bg-red-50 border-red-200"
+      : assignment.priority === "low"
+      ? "text-muted-foreground bg-secondary border-border"
+      : "text-amber-600 bg-amber-50 border-amber-200";
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden bg-[#fafaf9]">
+        {isLoading || !house ? (
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-8 w-2/3" />
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-[200px] w-full mt-4" />
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="bg-primary/5 p-6 border-b border-border">
+              <DialogHeader>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="text-2xl font-bold text-foreground mb-1">
+                      {house.name}
+                    </DialogTitle>
+                    <DialogDescription className="text-foreground/60 flex items-center gap-2 flex-wrap">
+                      {assignment.timeSlot && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {assignment.timeSlot}
+                        </span>
+                      )}
+                      {assignment.guestCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          {assignment.guestCount} guests
+                        </span>
+                      )}
+                    </DialogDescription>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <Badge variant="outline" className={cn("capitalize text-xs px-2.5 py-1 font-medium", priorityColor)}>
+                      {assignment.priority} priority
+                    </Badge>
+                    {house.mapLink && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(house.mapLink!, "_blank")}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        <MapPin className="h-3 w-3" />
+                        Open in Maps
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </DialogHeader>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left column */}
+              <div className="space-y-5">
+                {/* Property specs */}
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Property Specs
+                  </h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <BedDouble className="h-4 w-4 text-muted-foreground mb-1" />
+                      <span className="text-base font-bold leading-none">{house.doubleBeds ?? "-"}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase mt-1">Dbl</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <BedSingle className="h-4 w-4 text-muted-foreground mb-1" />
+                      <span className="text-base font-bold leading-none">{house.singleBeds ?? "-"}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase mt-1">Sgl</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <Baby className="h-4 w-4 text-muted-foreground mb-1" />
+                      <span className="text-base font-bold leading-none">{house.babyBeds ?? "-"}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase mt-1">Baby</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <Bath className="h-4 w-4 text-muted-foreground mb-1" />
+                      <span className="text-base font-bold leading-none">{house.bathrooms ?? "-"}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase mt-1">Bath</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Entry code */}
+                {house.entryCode && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Entry Code
+                    </h4>
+                    <div className="bg-card border border-border/50 rounded-lg px-4 py-3 flex items-center gap-3">
+                      <KeyRound className="h-4 w-4 text-primary shrink-0" />
+                      <span className="font-mono font-bold tracking-widest text-primary text-lg">
+                        {house.entryCode}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Owner contact */}
+                {(house.ownerName || house.ownerPhone || house.ownerEmail) && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Owner Contact
+                    </h4>
+                    <div className="bg-secondary/30 rounded-lg p-3 space-y-2 border border-border/50">
+                      {house.ownerName && (
+                        <p className="font-medium text-foreground text-sm">{house.ownerName}</p>
+                      )}
+                      {house.ownerPhone && (
+                        <a href={`tel:${house.ownerPhone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          {house.ownerPhone}
+                        </a>
+                      )}
+                      {house.ownerEmail && (
+                        <a href={`mailto:${house.ownerEmail}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          {house.ownerEmail}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right column — Notes */}
+              <div className="flex flex-col">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Notes
+                </h4>
+                <div className="flex-1 flex flex-col gap-3">
+                  <Textarea
+                    value={notesValue}
+                    onChange={(e) => setNotesValue(e.target.value)}
+                    placeholder="Add access codes, special instructions, or cleaning preferences..."
+                    className="flex-1 min-h-[180px] resize-none bg-amber-50/50 border-amber-200/50 focus-visible:ring-amber-500/30"
+                  />
+                  <Button
+                    onClick={handleSaveNotes}
+                    disabled={updateNotes.isPending || notesValue === (house.notes || "")}
+                    className="w-full"
+                  >
+                    {updateNotes.isPending ? "Saving..." : "Save Notes"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
