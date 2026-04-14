@@ -143,7 +143,9 @@ export interface House {
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  bedrooms?: number | null;
+  singleBeds?: number | null;
+  doubleBeds?: number | null;
+  babyBeds?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
   status: HouseStatus;
@@ -165,7 +167,9 @@ export interface CreateHouseBody {
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  bedrooms?: number | null;
+  singleBeds?: number | null;
+  doubleBeds?: number | null;
+  babyBeds?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
   status: CreateHouseBodyStatus;
@@ -186,7 +190,9 @@ export interface UpdateHouseBody {
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  bedrooms?: number | null;
+  singleBeds?: number | null;
+  doubleBeds?: number | null;
+  babyBeds?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
   status?: UpdateHouseBodyStatus;

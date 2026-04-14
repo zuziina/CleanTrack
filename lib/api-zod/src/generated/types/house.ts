@@ -15,7 +15,9 @@ export interface House {
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;
-  bedrooms?: number | null;
+  singleBeds?: number | null;
+  doubleBeds?: number | null;
+  babyBeds?: number | null;
   bathrooms?: number | null;
   entryCode?: string | null;
   status: HouseStatus;

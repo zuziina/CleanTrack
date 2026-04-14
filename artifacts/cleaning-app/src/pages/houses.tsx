@@ -27,7 +27,6 @@ import {
 import {
   Search,
   MapPin,
-  BedDouble,
   Bath,
   Activity,
   CalendarDays,
@@ -60,7 +59,9 @@ interface HouseFormState {
   ownerPhone: string;
   ownerEmail: string;
   notes: string;
-  bedrooms: string;
+  singleBeds: string;
+  doubleBeds: string;
+  babyBeds: string;
   bathrooms: string;
   entryCode: string;
   status: StatusValue;
@@ -73,7 +74,9 @@ const emptyForm = (): HouseFormState => ({
   ownerPhone: "",
   ownerEmail: "",
   notes: "",
-  bedrooms: "",
+  singleBeds: "",
+  doubleBeds: "",
+  babyBeds: "",
   bathrooms: "",
   entryCode: "",
   status: "active",
@@ -307,10 +310,16 @@ export default function HousesPage() {
                     )}
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                      <span className="flex items-center gap-1.5" title="Bedrooms">
-                        <BedDouble className="h-4 w-4" /> {house.bedrooms ?? "-"}
+                      <span className="flex items-center gap-1.5" title="Single beds">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">1x</span>{house.singleBeds ?? "-"}
                       </span>
-                      <span className="flex items-center gap-1.5" title="Bathrooms">
+                      <span className="flex items-center gap-1.5" title="Double beds">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">2x</span>{house.doubleBeds ?? "-"}
+                      </span>
+                      <span className="flex items-center gap-1.5" title="Baby beds">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">bb</span>{house.babyBeds ?? "-"}
+                      </span>
+                      <span className="flex items-center gap-1.5 ml-auto" title="Bathrooms">
                         <Bath className="h-4 w-4" /> {house.bathrooms ?? "-"}
                       </span>
                     </div>
@@ -437,11 +446,18 @@ function HouseDetailModal({
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Property Specs
                   </h4>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <BedDouble className="h-5 w-5 mb-1 text-muted-foreground" />
-                      <span className="text-lg font-bold leading-none">{house.bedrooms ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Beds</span>
+                      <span className="text-lg font-bold leading-none">{house.singleBeds ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Single</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                      <span className="text-lg font-bold leading-none">{house.doubleBeds ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Double</span>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+                      <span className="text-lg font-bold leading-none">{house.babyBeds ?? "-"}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Baby</span>
                     </div>
                     <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
                       <Bath className="h-5 w-5 mb-1 text-muted-foreground" />
@@ -518,7 +534,9 @@ function EditHouseModal({
         ownerPhone: house.ownerPhone || "",
         ownerEmail: house.ownerEmail || "",
         notes: house.notes || "",
-        bedrooms: house.bedrooms != null ? String(house.bedrooms) : "",
+        singleBeds: house.singleBeds != null ? String(house.singleBeds) : "",
+        doubleBeds: house.doubleBeds != null ? String(house.doubleBeds) : "",
+        babyBeds: house.babyBeds != null ? String(house.babyBeds) : "",
         bathrooms: house.bathrooms != null ? String(house.bathrooms) : "",
         entryCode: house.entryCode || "",
         status: (house.status as StatusValue) || "active",
@@ -540,7 +558,9 @@ function EditHouseModal({
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
           notes: form.notes || null,
-          bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
+          singleBeds: form.singleBeds ? parseInt(form.singleBeds) : null,
+          doubleBeds: form.doubleBeds ? parseInt(form.doubleBeds) : null,
+          babyBeds: form.babyBeds ? parseInt(form.babyBeds) : null,
           bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
           entryCode: form.entryCode || null,
           status: form.status,
@@ -627,10 +647,18 @@ function EditHouseModal({
                   <Input value={form.entryCode} onChange={(e) => set("entryCode", e.target.value)} placeholder="e.g. 1234#" className="font-mono" />
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Bedrooms">
-                  <Input type="number" min="0" step="1" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="e.g. 3" />
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="Single Beds">
+                  <Input type="number" min="0" step="1" value={form.singleBeds} onChange={(e) => set("singleBeds", e.target.value)} placeholder="0" />
                 </Field>
+                <Field label="Double Beds">
+                  <Input type="number" min="0" step="1" value={form.doubleBeds} onChange={(e) => set("doubleBeds", e.target.value)} placeholder="0" />
+                </Field>
+                <Field label="Baby Beds">
+                  <Input type="number" min="0" step="1" value={form.babyBeds} onChange={(e) => set("babyBeds", e.target.value)} placeholder="0" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <Field label="Bathrooms">
                   <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2" />
                 </Field>
@@ -738,7 +766,9 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           ownerPhone: form.ownerPhone || null,
           ownerEmail: form.ownerEmail || null,
           notes: form.notes || null,
-          bedrooms: form.bedrooms ? parseInt(form.bedrooms) : null,
+          singleBeds: form.singleBeds ? parseInt(form.singleBeds) : null,
+          doubleBeds: form.doubleBeds ? parseInt(form.doubleBeds) : null,
+          babyBeds: form.babyBeds ? parseInt(form.babyBeds) : null,
           bathrooms: form.bathrooms ? parseInt(form.bathrooms) : null,
           entryCode: form.entryCode || null,
           status: form.status,
@@ -798,10 +828,18 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
                 <Input value={form.entryCode} onChange={(e) => set("entryCode", e.target.value)} placeholder="e.g. 1234#" className="font-mono" />
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Bedrooms">
-                <Input type="number" min="0" step="1" value={form.bedrooms} onChange={(e) => set("bedrooms", e.target.value)} placeholder="e.g. 3" />
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Single Beds">
+                <Input type="number" min="0" step="1" value={form.singleBeds} onChange={(e) => set("singleBeds", e.target.value)} placeholder="0" />
               </Field>
+              <Field label="Double Beds">
+                <Input type="number" min="0" step="1" value={form.doubleBeds} onChange={(e) => set("doubleBeds", e.target.value)} placeholder="0" />
+              </Field>
+              <Field label="Baby Beds">
+                <Input type="number" min="0" step="1" value={form.babyBeds} onChange={(e) => set("babyBeds", e.target.value)} placeholder="0" />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Bathrooms">
                 <Input type="number" min="0" step="1" value={form.bathrooms} onChange={(e) => set("bathrooms", e.target.value)} placeholder="e.g. 2" />
               </Field>
