@@ -201,7 +201,7 @@ export const ListHousesResponse = zod.array(ListHousesResponseItem);
 export const CreateHouseBody = zod.object({
   name: zod.string(),
   mapLink: zod.string().nullish(),
-  ownerName: zod.string(),
+  ownerName: zod.string().nullish(),
   ownerPhone: zod.string().nullish(),
   ownerEmail: zod.string().nullish(),
   notes: zod.string().nullish(),

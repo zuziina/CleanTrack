@@ -163,7 +163,7 @@ export const CreateHouseBodyStatus = {
 export interface CreateHouseBody {
   name: string;
   mapLink?: string | null;
-  ownerName: string;
+  ownerName?: string | null;
   ownerPhone?: string | null;
   ownerEmail?: string | null;
   notes?: string | null;

@@ -894,7 +894,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           </Section>
 
           <Section title="Owner Details">
-            <Field label="Owner Name *">
+            <Field label="Owner Name">
               <Input value={form.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="e.g. Jane Smith" />
             </Field>
             <div className="grid grid-cols-2 gap-3">
@@ -921,7 +921,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={handleCreate}
-            disabled={createHouse.isPending || !form.name || !form.ownerName}
+            disabled={createHouse.isPending || !form.name}
             className="min-w-[120px]"
           >
             {createHouse.isPending ? "Adding..." : "Add Property"}

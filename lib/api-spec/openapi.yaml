@@ -505,6 +505,7 @@ components:
           nullable: true
         ownerName:
           type: string
+          nullable: true
         ownerPhone:
           type: string
           nullable: true
@@ -534,7 +535,6 @@ components:
           enum: [active, inactive]
       required:
         - name
-        - ownerName
         - status
 
     UpdateHouseBody:

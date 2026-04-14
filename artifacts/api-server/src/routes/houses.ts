@@ -85,7 +85,10 @@ router.post("/", requireAuth, async (req: any, res) => {
       res.status(400).json({ error: "Invalid request body" });
       return;
     }
-    const [h] = await db.insert(housesTable).values(parsed.data).returning();
+    const [h] = await db.insert(housesTable).values({
+      ...parsed.data,
+      ownerName: parsed.data.ownerName ?? "",
+    }).returning();
     res.status(201).json(formatHouse(h));
   } catch (err) {
     req.log.error({ err }, "Failed to create house");
