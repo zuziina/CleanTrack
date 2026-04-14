@@ -13,6 +13,8 @@ export const assignmentsTable = pgTable("assignments", {
   guestCount: integer("guest_count"),
   status: text("status").notNull().default("pending"),
   priority: text("priority").notNull().default("normal"),
+  startedAt: timestamp("started_at"),
+  finishedAt: timestamp("finished_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -748,6 +748,174 @@ export const useDeleteAssignment = <
 };
 
 /**
+ * @summary Mark cleaning as started (records startedAt timestamp)
+ */
+export const getStartCleaningUrl = (id: number) => {
+  return `/api/assignments/${id}/start`;
+};
+
+export const startCleaning = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Assignment> => {
+  return customFetch<Assignment>(getStartCleaningUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getStartCleaningMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCleaning>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startCleaning>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["startCleaning"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startCleaning>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return startCleaning(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartCleaningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startCleaning>>
+>;
+
+export type StartCleaningMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark cleaning as started (records startedAt timestamp)
+ */
+export const useStartCleaning = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCleaning>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startCleaning>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getStartCleaningMutationOptions(options));
+};
+
+/**
+ * @summary Mark cleaning as finished (records finishedAt timestamp)
+ */
+export const getFinishCleaningUrl = (id: number) => {
+  return `/api/assignments/${id}/finish`;
+};
+
+export const finishCleaning = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Assignment> => {
+  return customFetch<Assignment>(getFinishCleaningUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getFinishCleaningMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof finishCleaning>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof finishCleaning>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["finishCleaning"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof finishCleaning>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return finishCleaning(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FinishCleaningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof finishCleaning>>
+>;
+
+export type FinishCleaningMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark cleaning as finished (records finishedAt timestamp)
+ */
+export const useFinishCleaning = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof finishCleaning>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof finishCleaning>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getFinishCleaningMutationOptions(options));
+};
+
+/**
  * @summary Get today's assignments for the current user (employees) or all (boss)
  */
 export const getGetTodayAssignmentsUrl = () => {

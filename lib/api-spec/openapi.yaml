@@ -164,6 +164,44 @@ paths:
         "204":
           description: Deleted
 
+  /assignments/{id}/start:
+    post:
+      operationId: startCleaning
+      tags: [assignments]
+      summary: Mark cleaning as started (records startedAt timestamp)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assignment"
+
+  /assignments/{id}/finish:
+    post:
+      operationId: finishCleaning
+      tags: [assignments]
+      summary: Mark cleaning as finished (records finishedAt timestamp)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assignment"
+
   /assignments/today:
     get:
       operationId: getTodayAssignments
@@ -380,6 +418,12 @@ components:
         priority:
           type: string
           enum: [low, normal, high]
+        startedAt:
+          type: string
+          nullable: true
+        finishedAt:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:

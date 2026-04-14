@@ -68,6 +68,8 @@ export interface Assignment {
   guestCount?: number | null;
   status: AssignmentStatus;
   priority: AssignmentPriority;
+  startedAt?: string | null;
+  finishedAt?: string | null;
   createdAt: string;
 }
 

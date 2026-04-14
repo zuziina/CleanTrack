@@ -10,6 +10,8 @@ import {
   useDeleteAssignment,
   useGetHouse,
   useUpdateHouseNotes,
+  useStartCleaning,
+  useFinishCleaning,
   getGetHouseQueryKey,
   getGetTodayAssignmentsQueryKey,
   getListAssignmentsQueryKey,
@@ -41,9 +43,13 @@ import {
   Phone,
   Mail,
   KeyRound,
+  PlayCircle,
+  CheckCircle2,
+  Timer,
+  AlarmClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -551,6 +557,28 @@ function AssignmentCard({
             >
               {assignment.status === "pending" ? "assigned" : assignment.status.replace("_", " ")}
             </Badge>
+
+            {/* Timing info */}
+            {assignment.startedAt && (
+              <div className="text-[10px] text-muted-foreground text-right space-y-0.5">
+                <div className="flex items-center gap-1 justify-end">
+                  <PlayCircle className="h-2.5 w-2.5 text-blue-500" />
+                  <span>{formatTime(assignment.startedAt)}</span>
+                </div>
+                {assignment.finishedAt && (
+                  <>
+                    <div className="flex items-center gap-1 justify-end">
+                      <CheckCircle2 className="h-2.5 w-2.5 text-green-500" />
+                      <span>{formatTime(assignment.finishedAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 justify-end font-medium text-foreground/70">
+                      <Timer className="h-2.5 w-2.5" />
+                      <span>{formatDuration(Math.floor((new Date(assignment.finishedAt).getTime() - new Date(assignment.startedAt).getTime()) / 1000))}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </div>
@@ -912,23 +940,84 @@ function EditAssignmentModal({
   );
 }
 
+function useLiveElapsed(startedAt: string | null, finishedAt: string | null) {
+  const [elapsed, setElapsed] = useState(0);
+  const intervalRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!startedAt || finishedAt) {
+      clearInterval(intervalRef.current);
+      if (startedAt && finishedAt) {
+        setElapsed(Math.floor((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000));
+      }
+      return;
+    }
+    const tick = () => setElapsed(Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, [startedAt, finishedAt]);
+
+  return elapsed;
+}
+
+function formatDuration(seconds: number) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function AssignmentDetailModal({
-  assignment,
+  assignment: initialAssignment,
   onClose,
 }: {
   assignment: any;
   onClose: () => void;
 }) {
+  const [assignment, setAssignment] = useState(initialAssignment);
   const { data: house, isLoading } = useGetHouse(assignment.houseId, {
     query: { enabled: !!assignment.houseId, queryKey: getGetHouseQueryKey(assignment.houseId) },
   });
   const updateNotes = useUpdateHouseNotes();
+  const startCleaning = useStartCleaning();
+  const finishCleaning = useFinishCleaning();
   const qc = useQueryClient();
   const [notesValue, setNotesValue] = useState("");
+
+  const elapsed = useLiveElapsed(assignment.startedAt ?? null, assignment.finishedAt ?? null);
 
   useEffect(() => {
     if (house?.notes != null) setNotesValue(house.notes);
   }, [house?.notes]);
+
+  const handleStart = () => {
+    startCleaning.mutate({ id: assignment.id }, {
+      onSuccess: (data) => {
+        setAssignment(data);
+        qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      },
+      onError: () => toast.error("Failed to start cleaning"),
+    });
+  };
+
+  const handleFinish = () => {
+    finishCleaning.mutate({ id: assignment.id }, {
+      onSuccess: (data) => {
+        setAssignment(data);
+        qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      },
+      onError: () => toast.error("Failed to finish cleaning"),
+    });
+  };
 
   const handleSaveNotes = () => {
     updateNotes.mutate(
@@ -952,9 +1041,13 @@ function AssignmentDetailModal({
       ? "text-muted-foreground bg-secondary border-border"
       : "text-amber-600 bg-amber-50 border-amber-200";
 
+  const notStarted = !assignment.startedAt;
+  const inProgress = assignment.startedAt && !assignment.finishedAt;
+  const done = assignment.startedAt && assignment.finishedAt;
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden bg-[#fafaf9]">
+      <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden bg-[#fafaf9] max-h-[90vh] overflow-y-auto">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-2/3" />
@@ -1004,6 +1097,80 @@ function AssignmentDetailModal({
                   </div>
                 </div>
               </DialogHeader>
+            </div>
+
+            {/* Cleaning Tracker */}
+            <div className={cn(
+              "px-6 py-5 border-b border-border",
+              done ? "bg-emerald-50" : inProgress ? "bg-amber-50" : "bg-white"
+            )}>
+              {notStarted && (
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <p className="text-sm text-muted-foreground">Tap the button when you begin cleaning</p>
+                  <Button
+                    size="lg"
+                    className="w-full max-w-xs h-14 text-base font-semibold gap-2 bg-primary hover:bg-primary/90 shadow-md"
+                    onClick={handleStart}
+                    disabled={startCleaning.isPending}
+                  >
+                    {startCleaning.isPending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <PlayCircle className="h-5 w-5" />
+                    )}
+                    Start Cleaning
+                  </Button>
+                </div>
+              )}
+
+              {inProgress && (
+                <div className="flex flex-col items-center gap-3 py-1">
+                  <div className="flex items-center gap-2 text-amber-700">
+                    <Timer className="h-4 w-4 animate-pulse" />
+                    <span className="text-sm font-medium">
+                      Started at {formatTime(assignment.startedAt)} — cleaning in progress
+                    </span>
+                  </div>
+                  <div className="text-4xl font-bold font-mono tabular-nums text-amber-700">
+                    {formatDuration(elapsed)}
+                  </div>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full max-w-xs h-14 text-base font-semibold gap-2 border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-sm"
+                    onClick={handleFinish}
+                    disabled={finishCleaning.isPending}
+                  >
+                    {finishCleaning.isPending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5" />
+                    )}
+                    Finish Cleaning
+                  </Button>
+                </div>
+              )}
+
+              {done && (
+                <div className="flex flex-col items-center gap-2 py-1">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                  <p className="font-semibold text-emerald-700 text-base">Cleaning Complete</p>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                    <span className="flex items-center gap-1">
+                      <AlarmClock className="h-3.5 w-3.5" />
+                      Started: {formatTime(assignment.startedAt)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Finished: {formatTime(assignment.finishedAt)}
+                    </span>
+                  </div>
+                  <div className="mt-1 bg-emerald-100 border border-emerald-200 rounded-full px-4 py-1 text-emerald-800 font-semibold text-sm flex items-center gap-1.5">
+                    <Timer className="h-3.5 w-3.5" />
+                    Total: {formatDuration(elapsed)}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1090,7 +1257,7 @@ function AssignmentDetailModal({
                     value={notesValue}
                     onChange={(e) => setNotesValue(e.target.value)}
                     placeholder="Add access codes, special instructions, or cleaning preferences..."
-                    className="flex-1 min-h-[180px] resize-none bg-amber-50/50 border-amber-200/50 focus-visible:ring-amber-500/30"
+                    className="flex-1 min-h-[140px] resize-none bg-amber-50/50 border-amber-200/50 focus-visible:ring-amber-500/30"
                   />
                   <Button
                     onClick={handleSaveNotes}

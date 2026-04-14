@@ -71,6 +71,8 @@ export const ListAssignmentsResponseItem = zod.object({
   guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem);
@@ -109,6 +111,8 @@ export const GetAssignmentResponse = zod.object({
   guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -143,6 +147,8 @@ export const UpdateAssignmentResponse = zod.object({
   guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -151,6 +157,56 @@ export const UpdateAssignmentResponse = zod.object({
  */
 export const DeleteAssignmentParams = zod.object({
   id: zod.coerce.number(),
+});
+
+/**
+ * @summary Mark cleaning as started (records startedAt timestamp)
+ */
+export const StartCleaningParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const StartCleaningResponse = zod.object({
+  id: zod.number(),
+  houseId: zod.number(),
+  houseName: zod.string(),
+  houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
+  date: zod.string(),
+  timeSlot: zod.string(),
+  notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
+  status: zod.enum(["pending", "in_progress", "completed"]),
+  priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Mark cleaning as finished (records finishedAt timestamp)
+ */
+export const FinishCleaningParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const FinishCleaningResponse = zod.object({
+  id: zod.number(),
+  houseId: zod.number(),
+  houseName: zod.string(),
+  houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
+  date: zod.string(),
+  timeSlot: zod.string(),
+  notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
+  status: zod.enum(["pending", "in_progress", "completed"]),
+  priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+  createdAt: zod.string(),
 });
 
 /**
@@ -169,6 +225,8 @@ export const GetTodayAssignmentsResponseItem = zod.object({
   guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]),
   priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const GetTodayAssignmentsResponse = zod.array(

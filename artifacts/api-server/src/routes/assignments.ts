@@ -59,6 +59,8 @@ async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect;
     guestCount: r.assignments.guestCount,
     status: r.assignments.status,
     priority: r.assignments.priority,
+    startedAt: r.assignments.startedAt?.toISOString() ?? null,
+    finishedAt: r.assignments.finishedAt?.toISOString() ?? null,
     createdAt: r.assignments.createdAt.toISOString(),
   };
 }
@@ -198,6 +200,44 @@ router.put("/:id", requireAuth, async (req: any, res) => {
     res.json(await formatRow({ assignments: a, houses: house }));
   } catch (err) {
     req.log.error({ err }, "Failed to update assignment");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/start", requireAuth, async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const [a] = await db
+      .update(assignmentsTable)
+      .set({ startedAt: new Date(), status: "in_progress" })
+      .where(eq(assignmentsTable.id, id))
+      .returning();
+    if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
+    const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
+    if (!house) { res.status(404).json({ error: "House not found" }); return; }
+    res.json(await formatRow({ assignments: a, houses: house }));
+  } catch (err) {
+    req.log.error({ err }, "Failed to start cleaning");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/finish", requireAuth, async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const [a] = await db
+      .update(assignmentsTable)
+      .set({ finishedAt: new Date(), status: "completed" })
+      .where(eq(assignmentsTable.id, id))
+      .returning();
+    if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
+    const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
+    if (!house) { res.status(404).json({ error: "House not found" }); return; }
+    res.json(await formatRow({ assignments: a, houses: house }));
+  } catch (err) {
+    req.log.error({ err }, "Failed to finish cleaning");
     res.status(500).json({ error: "Internal server error" });
   }
 });
