@@ -9,9 +9,10 @@ import type { UpdateAssignmentBodyPriority } from "./updateAssignmentBodyPriorit
 import type { UpdateAssignmentBodyStatus } from "./updateAssignmentBodyStatus";
 
 export interface UpdateAssignmentBody {
+  houseId?: number | null;
   assignedToClerkId?: string | null;
-  date?: string;
-  timeSlot?: string;
+  date?: string | null;
+  timeSlot?: string | null;
   notes?: string | null;
   guestCount?: number | null;
   status?: UpdateAssignmentBodyStatus;

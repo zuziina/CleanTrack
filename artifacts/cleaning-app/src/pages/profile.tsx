@@ -6,6 +6,8 @@ import {
   useListHouses,
   useListAssignments,
   useCreateAssignment,
+  useUpdateAssignment,
+  useDeleteAssignment,
   getGetTodayAssignmentsQueryKey,
   getListAssignmentsQueryKey,
 } from "@workspace/api-client-react";
@@ -26,6 +28,8 @@ import {
   Crown,
   Plus,
   UserCheck,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo } from "react";
@@ -197,6 +201,7 @@ function BossDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(today);
   const [weekRef, setWeekRef] = useState<Date>(today);
   const [assignTarget, setAssignTarget] = useState<any>(null);
+  const [editTarget, setEditTarget] = useState<any>(null);
 
   const { data: users, isLoading: usersLoading } = useListUsers();
   const { data: allAssignments, isLoading: assignmentsLoading } = useListAssignments();
@@ -410,7 +415,7 @@ function BossDashboard() {
           ) : (
             <div className="space-y-3">
               {selectedAssignments.map((a: any) => (
-                <AssignmentCard key={a.id} assignment={a} showAssignee />
+                <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
               ))}
             </div>
           )}
@@ -424,6 +429,13 @@ function BossDashboard() {
           onClose={() => setAssignTarget(null)}
         />
       )}
+
+      {editTarget && (
+        <EditAssignmentModal
+          assignment={editTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -431,9 +443,11 @@ function BossDashboard() {
 function AssignmentCard({
   assignment,
   showAssignee = false,
+  onEdit,
 }: {
   assignment: any;
   showAssignee?: boolean;
+  onEdit?: () => void;
 }) {
   return (
     <Card className="overflow-hidden border-border/50 hover:shadow-sm transition-shadow">
@@ -453,16 +467,25 @@ function AssignmentCard({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="font-semibold text-base leading-tight">{assignment.houseName}</h3>
-                <div className="flex items-center text-muted-foreground text-sm gap-1 mt-1">
-                  <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="truncate">{assignment.houseAddress}</span>
-                </div>
+                {assignment.timeSlot && (
+                  <div className="flex items-center text-muted-foreground text-sm gap-1 mt-1">
+                    <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate">{assignment.timeSlot}</span>
+                  </div>
+                )}
               </div>
-              {assignment.priority === "high" && (
-                <Badge variant="destructive" className="h-5 px-1.5 py-0 text-[10px] uppercase shrink-0">
-                  High
-                </Badge>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {assignment.priority === "high" && (
+                  <Badge variant="destructive" className="h-5 px-1.5 py-0 text-[10px] uppercase">
+                    High
+                  </Badge>
+                )}
+                {onEdit && (
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={onEdit}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
 
             {showAssignee && assignment.assignedToUsername && (
@@ -487,10 +510,6 @@ function AssignmentCard({
           </div>
 
           <div className="flex items-center sm:items-end justify-between sm:flex-col gap-2 shrink-0">
-            <div className="flex items-center text-sm font-medium gap-1.5 bg-secondary px-2.5 py-1 rounded-md text-foreground">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              {assignment.timeSlot}
-            </div>
             <Badge
               variant="outline"
               className={cn(
@@ -664,5 +683,204 @@ function AssignModal({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditAssignmentModal({
+  assignment,
+  onClose,
+}: {
+  assignment: any;
+  onClose: () => void;
+}) {
+  const { data: houses } = useListHouses();
+  const updateAssignment = useUpdateAssignment();
+  const deleteAssignment = useDeleteAssignment();
+  const qc = useQueryClient();
+
+  const [houseId, setHouseId] = useState(String(assignment.houseId));
+  const [date, setDate] = useState(assignment.date || "");
+  const [timeSlot, setTimeSlot] = useState(assignment.timeSlot || "");
+  const [guestCount, setGuestCount] = useState(assignment.guestCount != null ? String(assignment.guestCount) : "");
+  const [priority, setPriority] = useState<"low" | "normal" | "high">(assignment.priority || "normal");
+  const [status, setStatus] = useState<"pending" | "in_progress" | "completed">(assignment.status || "pending");
+  const [notes, setNotes] = useState(assignment.notes || "");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!houseId || !guestCount) return;
+
+    updateAssignment.mutate(
+      {
+        id: assignment.id,
+        data: {
+          houseId: parseInt(houseId, 10),
+          date: date || undefined,
+          timeSlot: timeSlot || undefined,
+          guestCount: parseInt(guestCount, 10),
+          status,
+          priority,
+          notes: notes || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Assignment updated");
+          invalidate();
+          onClose();
+        },
+        onError: () => toast.error("Failed to update assignment"),
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    deleteAssignment.mutate(
+      { id: assignment.id },
+      {
+        onSuccess: () => {
+          toast.success("Assignment deleted");
+          invalidate();
+          onClose();
+        },
+        onError: () => toast.error("Failed to delete assignment"),
+      }
+    );
+  };
+
+  const isBusy = updateAssignment.isPending || deleteAssignment.isPending;
+
+  return (
+    <>
+      <Dialog open onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="sm:max-w-[440px] bg-[#fafaf9]">
+          <DialogHeader>
+            <DialogTitle>Edit Assignment</DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-foreground">{assignment.houseName}</span>
+              {assignment.assignedToUsername && (
+                <> &mdash; {assignment.assignedToUsername}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Property *</Label>
+              <Select value={houseId} onValueChange={setHouseId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a property" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(houses ?? []).map((h: any) => (
+                    <SelectItem key={h.id} value={String(h.id)}>
+                      {h.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Time Slot</Label>
+                <Input placeholder="e.g. 9:00 – 11:00 AM" value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Guests Today *</Label>
+                <Input type="number" min="0" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes (optional)</Label>
+              <Textarea placeholder="Any specific instructions..." value={notes} onChange={(e) => setNotes(e.target.value)} className="resize-none" />
+            </div>
+
+            <div className="flex justify-between gap-3 pt-2">
+              <Button type="button" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setShowDeleteConfirm(true)} disabled={isBusy}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isBusy || !houseId || !guestCount}>
+                  {updateAssignment.isPending ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={(o) => !o && setShowDeleteConfirm(false)}>
+        <DialogContent className="sm:max-w-[360px] bg-[#fafaf9]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete assignment?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently remove the assignment for{" "}
+              <span className="font-semibold text-foreground">{assignment.houseName}</span>.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleteAssignment.isPending}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteAssignment.isPending}>
+              {deleteAssignment.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</>
+              ) : (
+                "Yes, delete"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

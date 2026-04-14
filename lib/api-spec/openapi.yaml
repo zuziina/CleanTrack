@@ -427,13 +427,18 @@ components:
     UpdateAssignmentBody:
       type: object
       properties:
+        houseId:
+          type: integer
+          nullable: true
         assignedToClerkId:
           type: string
           nullable: true
         date:
           type: string
+          nullable: true
         timeSlot:
           type: string
+          nullable: true
         notes:
           type: string
           nullable: true

@@ -120,9 +120,10 @@ export const UpdateAssignmentParams = zod.object({
 });
 
 export const UpdateAssignmentBody = zod.object({
+  houseId: zod.number().nullish(),
   assignedToClerkId: zod.string().nullish(),
-  date: zod.string().optional(),
-  timeSlot: zod.string().optional(),
+  date: zod.string().nullish(),
+  timeSlot: zod.string().nullish(),
   notes: zod.string().nullish(),
   guestCount: zod.number().nullish(),
   status: zod.enum(["pending", "in_progress", "completed"]).optional(),
