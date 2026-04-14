@@ -28,6 +28,9 @@ import {
   Search,
   MapPin,
   Bath,
+  BedSingle,
+  BedDouble,
+  Baby,
   Activity,
   CalendarDays,
   Pencil,
@@ -311,16 +314,16 @@ export default function HousesPage() {
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50">
                       <span className="flex items-center gap-1.5" title="Single beds">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">1x</span>{house.singleBeds ?? "-"}
+                        <BedSingle className="h-4 w-4" />{house.singleBeds ?? "-"}
                       </span>
                       <span className="flex items-center gap-1.5" title="Double beds">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">2x</span>{house.doubleBeds ?? "-"}
+                        <BedDouble className="h-4 w-4" />{house.doubleBeds ?? "-"}
                       </span>
                       <span className="flex items-center gap-1.5" title="Baby beds">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">bb</span>{house.babyBeds ?? "-"}
+                        <Baby className="h-4 w-4" />{house.babyBeds ?? "-"}
                       </span>
                       <span className="flex items-center gap-1.5 ml-auto" title="Bathrooms">
-                        <Bath className="h-4 w-4" /> {house.bathrooms ?? "-"}
+                        <Bath className="h-4 w-4" />{house.bathrooms ?? "-"}
                       </span>
                     </div>
                   </div>
