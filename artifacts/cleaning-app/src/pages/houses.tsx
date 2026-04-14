@@ -318,25 +318,33 @@ export default function HousesPage() {
                     )}
 
                     <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2 border-t border-border/50 flex-wrap">
-                      <span className="flex items-center gap-1.5" title="Double beds">
-                        <BedDouble className="h-4 w-4" />{house.doubleBeds ?? "-"}
-                      </span>
-                      <span className="flex items-center gap-1.5" title="Single beds">
-                        <BedSingle className="h-4 w-4" />{house.singleBeds ?? "-"}
-                      </span>
-                      <span className="flex items-center gap-1.5" title="Baby beds">
-                        <Baby className="h-4 w-4" />{house.babyBeds ?? "-"}
-                      </span>
-                      <span className="flex items-center gap-1.5" title="Bathrooms">
-                        <Bath className="h-4 w-4" />{house.bathrooms ?? "-"}
-                      </span>
+                      {(house.doubleBeds ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5" title="Double beds">
+                          <BedDouble className="h-4 w-4" />{house.doubleBeds}
+                        </span>
+                      )}
+                      {(house.singleBeds ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5" title="Single beds">
+                          <BedSingle className="h-4 w-4" />{house.singleBeds}
+                        </span>
+                      )}
+                      {(house.babyBeds ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5" title="Baby beds">
+                          <Baby className="h-4 w-4" />{house.babyBeds}
+                        </span>
+                      )}
+                      {(house.bathrooms ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5" title="Bathrooms">
+                          <Bath className="h-4 w-4" />{house.bathrooms}
+                        </span>
+                      )}
                       {(house.jacuzzis ?? 0) > 0 && (
                         <span className="flex items-center gap-1.5" title="Jacuzzis">
                           <Waves className="h-4 w-4" />{house.jacuzzis}
                         </span>
                       )}
                       {(house.saunas ?? 0) > 0 && (
-                        <span className="flex items-center gap-1.5 ml-auto" title="Saunas">
+                        <span className="flex items-center gap-1.5" title="Saunas">
                           <Flame className="h-4 w-4" />{house.saunas}
                         </span>
                       )}
