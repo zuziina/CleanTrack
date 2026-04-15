@@ -966,7 +966,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         {title}
       </h4>
-      {children}
+      <div className="space-y-3 bg-white rounded-xl border border-border/50 p-4 shadow-sm">
+        {children}
+      </div>
     </div>
   );
 }
