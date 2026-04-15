@@ -6,6 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   ChevronLeft,
   ChevronRight,
   LogIn,
@@ -15,6 +24,8 @@ import {
   Clock,
   Loader2,
   Users,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -201,6 +212,7 @@ function EmployeeAttendance() {
   const monthStr = toMonthStr(monthRef);
   const { sessions, isLoading: sessionsLoading, refetch } = useWorkSessions(monthStr);
   const todayState = useTodaySession();
+  const [editingDay, setEditingDay] = useState<{ dateStr: string; session: WorkSession | null } | null>(null);
 
   const prevMonth = () => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -227,6 +239,13 @@ function EmployeeAttendance() {
       refetch();
     }
   }, [todayState.session]);
+
+  const handleDaySaved = useCallback((dateStr: string, updated: WorkSession | null) => {
+    refetch();
+    if (dateStr === todayStr) {
+      todayState.reload();
+    }
+  }, [refetch, todayStr, todayState.reload]);
 
   const grid = getMonthGrid(monthRef.getFullYear(), monthRef.getMonth());
   const weeks: (Date | null)[][] = [];
@@ -279,20 +298,28 @@ function EmployeeAttendance() {
                   const s = isToday ? effectiveTodaySession : (sessionByDate[ds] ?? null);
                   const isFuture = ds > todayStr;
                   const dur = s ? sessionDuration(s) : null;
+                  const isClickable = !isFuture;
 
                   return (
                     <div
                       key={di}
+                      onClick={() => isClickable && setEditingDay({ dateStr: ds, session: s })}
                       className={cn(
-                        "min-h-[80px] p-1.5 border-r border-border last:border-r-0 flex flex-col gap-1 transition-colors",
-                        isToday ? "bg-primary/5" : isFuture ? "bg-secondary/10" : "bg-card"
+                        "min-h-[80px] p-1.5 border-r border-border last:border-r-0 flex flex-col gap-1 transition-colors relative group",
+                        isToday ? "bg-primary/5" : isFuture ? "bg-secondary/10" : "bg-card",
+                        isClickable && "cursor-pointer hover:bg-primary/5"
                       )}
                     >
-                      <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                        isToday ? "bg-primary text-primary-foreground" : "text-foreground/70"
-                      )}>
-                        {day.getDate()}
+                      <div className="flex items-start justify-between">
+                        <div className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                          isToday ? "bg-primary text-primary-foreground" : "text-foreground/70"
+                        )}>
+                          {day.getDate()}
+                        </div>
+                        {isClickable && (
+                          <Pencil className="h-2.5 w-2.5 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors shrink-0 mt-0.5" />
+                        )}
                       </div>
 
                       {s?.clockedInAt && (
@@ -328,7 +355,23 @@ function EmployeeAttendance() {
             ))}
           </div>
         )}
+
+        <p className="text-[11px] text-muted-foreground text-center">
+          Tap any past day to add or edit your hours
+        </p>
       </div>
+
+      {editingDay && (
+        <DayEditDialog
+          dateStr={editingDay.dateStr}
+          session={editingDay.session}
+          onClose={() => setEditingDay(null)}
+          onSaved={(updated) => {
+            handleDaySaved(editingDay.dateStr, updated);
+            setEditingDay(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -453,6 +496,154 @@ function TodayClockWidget({
         Undo clock-out
       </button>
     </div>
+  );
+}
+
+function toTimeInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatDateLabel(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+}
+
+function DayEditDialog({
+  dateStr,
+  session,
+  onClose,
+  onSaved,
+}: {
+  dateStr: string;
+  session: WorkSession | null;
+  onClose: () => void;
+  onSaved: (updated: WorkSession | null) => void;
+}) {
+  const [clockIn, setClockIn] = useState(toTimeInput(session?.clockedInAt));
+  const [clockOut, setClockOut] = useState(toTimeInput(session?.clockedOutAt));
+  const [busy, setBusy] = useState(false);
+
+  const hasData = !!session?.clockedInAt;
+
+  const save = async () => {
+    if (!clockIn && clockOut) {
+      toast.error("Cannot set clock-out without a clock-in time");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/work-sessions/date/${dateStr}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          clockedInAt: clockIn || null,
+          clockedOutAt: clockOut || null,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        toast.error(err.error ?? "Could not save");
+        return;
+      }
+      const data = await r.json();
+      toast.success("Attendance updated");
+      onSaved(data);
+      onClose();
+    } catch {
+      toast.error("Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const clear = async () => {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/work-sessions/date/${dateStr}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ clockedInAt: null, clockedOutAt: null }),
+      });
+      if (r.ok) {
+        toast.success("Entry cleared");
+        onSaved(null);
+        onClose();
+      } else {
+        toast.error("Could not clear");
+      }
+    } catch {
+      toast.error("Could not clear");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm bg-[#fafaf9]">
+        <DialogHeader>
+          <DialogTitle className="text-base">{formatDateLabel(dateStr)}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <LogIn className="h-3.5 w-3.5 text-emerald-600" />
+              Clock-in time
+            </Label>
+            <Input
+              type="time"
+              value={clockIn}
+              onChange={(e) => setClockIn(e.target.value)}
+              className="h-10"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <LogOut className="h-3.5 w-3.5 text-rose-500" />
+              Clock-out time
+              <span className="font-normal normal-case tracking-normal text-muted-foreground/60">(optional)</span>
+            </Label>
+            <Input
+              type="time"
+              value={clockOut}
+              onChange={(e) => setClockOut(e.target.value)}
+              className="h-10"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          {hasData && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+              onClick={clear}
+              disabled={busy}
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Clear entry
+            </Button>
+          )}
+          <div className="flex gap-2 sm:ml-auto">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={save} disabled={busy} className="gap-1.5">
+              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Save
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

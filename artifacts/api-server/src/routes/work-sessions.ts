@@ -193,6 +193,88 @@ router.post("/clock-out", requireAuthAndCompany, async (req: any, res) => {
   }
 });
 
+router.put("/date/:date", requireAuthAndCompany, async (req: any, res) => {
+  try {
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      res.status(400).json({ error: "date must be YYYY-MM-DD" });
+      return;
+    }
+
+    const { clockedInAt, clockedOutAt } = req.body as {
+      clockedInAt?: string | null;
+      clockedOutAt?: string | null;
+    };
+
+    const buildTimestamp = (timeStr: string | null | undefined, date: string): Date | null => {
+      if (!timeStr) return null;
+      const [h, m] = timeStr.split(":").map(Number);
+      if (isNaN(h) || isNaN(m)) return null;
+      const d = new Date(`${date}T00:00:00`);
+      d.setHours(h, m, 0, 0);
+      return d;
+    };
+
+    const inTs = buildTimestamp(clockedInAt, date);
+    const outTs = buildTimestamp(clockedOutAt, date);
+
+    if (inTs && outTs && outTs <= inTs) {
+      res.status(400).json({ error: "Clock-out must be after clock-in" });
+      return;
+    }
+
+    if (!inTs && !outTs) {
+      await db
+        .delete(workSessionsTable)
+        .where(
+          and(
+            eq(workSessionsTable.clerkUserId, req.clerkUserId),
+            eq(workSessionsTable.companyId, req.companyId),
+            eq(workSessionsTable.date, date),
+          )
+        );
+      res.json(null);
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(workSessionsTable)
+      .where(
+        and(
+          eq(workSessionsTable.clerkUserId, req.clerkUserId),
+          eq(workSessionsTable.companyId, req.companyId),
+          eq(workSessionsTable.date, date),
+        )
+      );
+
+    let result;
+    if (existing) {
+      [result] = await db
+        .update(workSessionsTable)
+        .set({ clockedInAt: inTs, clockedOutAt: outTs })
+        .where(eq(workSessionsTable.id, existing.id))
+        .returning();
+    } else {
+      [result] = await db
+        .insert(workSessionsTable)
+        .values({
+          clerkUserId: req.clerkUserId,
+          companyId: req.companyId,
+          date,
+          clockedInAt: inTs,
+          clockedOutAt: outTs,
+        })
+        .returning();
+    }
+
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to upsert work session");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/today", requireAuthAndCompany, async (req: any, res) => {
   try {
     await db
