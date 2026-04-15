@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Cleaning Company App"
+title = "CleanTrack"
 version = "1.0.0"
 id = "artifacts/cleaning-app"
 router = "path"
