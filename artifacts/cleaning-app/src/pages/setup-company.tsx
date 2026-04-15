@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Users, Copy, Check, ArrowRight, Loader2 } from "lucide-react";
+import { Building2, Users, Copy, Check, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+
+type View = "choice" | "create" | "join";
 
 export default function SetupCompanyPage() {
   const { user, isLoaded } = useUser();
+  const [view, setView] = useState<View>("choice");
 
   if (!isLoaded) {
     return (
@@ -23,16 +25,61 @@ export default function SetupCompanyPage() {
 
   if (!user) return <Redirect to="/" />;
 
-  const role = user.publicMetadata?.role as string | undefined;
-  if (!role) return <Redirect to="/setup-role" />;
-
   const companyId = user.publicMetadata?.companyId as number | undefined;
   if (companyId) return <Redirect to="/profile" />;
 
-  return role === "boss" ? <CreateCompanyView clerkUser={user} /> : <JoinCompanyView clerkUser={user} />;
+  if (view === "create") return <CreateCompanyView clerkUser={user} onBack={() => setView("choice")} />;
+  if (view === "join") return <JoinCompanyView clerkUser={user} onBack={() => setView("choice")} />;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="max-w-2xl w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Welcome to CleanTrack</h1>
+          <p className="text-muted-foreground">Set up your company workspace to get started.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card
+            className="cursor-pointer border-2 hover:border-primary transition-all hover:shadow-md hover:-translate-y-1"
+            onClick={() => setView("create")}
+          >
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="bg-primary/10 p-4 rounded-full">
+                <Building2 className="h-10 w-10 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-xl mb-2">Create a Company</h3>
+                <p className="text-sm text-muted-foreground">
+                  Start a new workspace, manage properties, and invite your team.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer border-2 hover:border-primary transition-all hover:shadow-md hover:-translate-y-1"
+            onClick={() => setView("join")}
+          >
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <div className="bg-primary/10 p-4 rounded-full">
+                <Users className="h-10 w-10 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-xl mb-2">Join a Company</h3>
+                <p className="text-sm text-muted-foreground">
+                  Enter an invite code from your boss to join their workspace.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function CreateCompanyView({ clerkUser }: { clerkUser: any }) {
+function CreateCompanyView({ clerkUser, onBack }: { clerkUser: any; onBack: () => void }) {
   const [, setLocation] = useLocation();
   const [name, setName] = useState("");
   const [createdCompany, setCreatedCompany] = useState<{ name: string; inviteCode: string } | null>(null);
@@ -102,6 +149,9 @@ function CreateCompanyView({ clerkUser }: { clerkUser: any }) {
                     "Create Company"
                   )}
                 </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={onBack}>
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                </Button>
               </form>
             </CardContent>
           </Card>
@@ -120,12 +170,7 @@ function CreateCompanyView({ clerkUser }: { clerkUser: any }) {
                   <div className="flex-1 font-mono text-2xl font-bold tracking-widest bg-muted rounded-lg px-4 py-3 text-center select-all">
                     {createdCompany.inviteCode}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopy}
-                    className="shrink-0"
-                  >
+                  <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0">
                     {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -142,7 +187,7 @@ function CreateCompanyView({ clerkUser }: { clerkUser: any }) {
   );
 }
 
-function JoinCompanyView({ clerkUser }: { clerkUser: any }) {
+function JoinCompanyView({ clerkUser, onBack }: { clerkUser: any; onBack: () => void }) {
   const [, setLocation] = useLocation();
   const [code, setCode] = useState("");
   const [joinedCompany, setJoinedCompany] = useState<{ name: string } | null>(null);
@@ -206,6 +251,9 @@ function JoinCompanyView({ clerkUser }: { clerkUser: any }) {
                   ) : (
                     "Join Company"
                   )}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={onBack}>
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back
                 </Button>
               </form>
             </CardContent>
