@@ -207,17 +207,14 @@ router.put("/date/:date", requireAuthAndCompany, async (req: any, res) => {
       clockedOutAt?: string | null;
     };
 
-    const buildTimestamp = (timeStr: string | null | undefined, date: string): Date | null => {
-      if (!timeStr) return null;
-      const [h, m] = timeStr.split(":").map(Number);
-      if (isNaN(h) || isNaN(m)) return null;
-      const d = new Date(`${date}T00:00:00`);
-      d.setHours(h, m, 0, 0);
-      return d;
+    const parseTimestamp = (value: string | null | undefined): Date | null => {
+      if (!value) return null;
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
     };
 
-    const inTs = buildTimestamp(clockedInAt, date);
-    const outTs = buildTimestamp(clockedOutAt, date);
+    const inTs = parseTimestamp(clockedInAt);
+    const outTs = parseTimestamp(clockedOutAt);
 
     if (inTs && outTs && outTs <= inTs) {
       res.status(400).json({ error: "Clock-out must be after clock-in" });

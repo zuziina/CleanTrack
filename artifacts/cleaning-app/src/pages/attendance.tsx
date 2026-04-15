@@ -24,7 +24,6 @@ import {
   Clock,
   Loader2,
   Users,
-  Pencil,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -292,35 +291,40 @@ function EmployeeAttendance() {
             {weeks.map((week, wi) => (
               <div key={wi} className="grid grid-cols-7 border-b border-border last:border-b-0">
                 {week.map((day, di) => {
-                  if (!day) return <div key={di} className="min-h-[80px] bg-secondary/20 border-r border-border last:border-r-0" />;
+                  if (!day) return <div key={di} className="min-h-[80px] bg-muted/30 border-r border-border last:border-r-0" />;
                   const ds = toDateStr(day);
                   const isToday = ds === todayStr;
                   const s = isToday ? effectiveTodaySession : (sessionByDate[ds] ?? null);
                   const isFuture = ds > todayStr;
+                  const isPast = !isToday && !isFuture;
                   const dur = s ? sessionDuration(s) : null;
-                  const isClickable = !isFuture;
+                  const isEmpty = !s?.clockedInAt;
 
                   return (
                     <div
                       key={di}
-                      onClick={() => isClickable && setEditingDay({ dateStr: ds, session: s })}
+                      onClick={() => !isFuture && setEditingDay({ dateStr: ds, session: s })}
                       className={cn(
-                        "min-h-[80px] p-1.5 border-r border-border last:border-r-0 flex flex-col gap-1 transition-colors relative group",
-                        isToday ? "bg-primary/5" : isFuture ? "bg-secondary/10" : "bg-card",
-                        isClickable && "cursor-pointer hover:bg-primary/5"
+                        "min-h-[80px] p-1.5 border-r border-border last:border-r-0 flex flex-col gap-1 transition-colors group",
+                        isToday && "bg-primary/5",
+                        isFuture && "bg-muted/20 opacity-40",
+                        isPast && isEmpty && "bg-amber-50/40 hover:bg-amber-50/80",
+                        isPast && !isEmpty && "bg-card hover:bg-primary/5",
+                        !isFuture && "cursor-pointer"
                       )}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                          isToday ? "bg-primary text-primary-foreground" : "text-foreground/70"
-                        )}>
-                          {day.getDate()}
-                        </div>
-                        {isClickable && (
-                          <Pencil className="h-2.5 w-2.5 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors shrink-0 mt-0.5" />
-                        )}
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                        isToday ? "bg-primary text-primary-foreground" : "text-foreground/70"
+                      )}>
+                        {day.getDate()}
                       </div>
+
+                      {!isFuture && isEmpty && (
+                        <div className="flex-1 flex items-center justify-center">
+                          <span className="text-[10px] text-amber-600/70 font-medium group-hover:text-amber-700 transition-colors">+ Add</span>
+                        </div>
+                      )}
 
                       {s?.clockedInAt && (
                         <div className="flex flex-col gap-0.5 min-w-0">
@@ -335,11 +339,16 @@ function EmployeeAttendance() {
                                 <span className="truncate">{formatTime(s.clockedOutAt)}</span>
                               </div>
                               {dur !== null && (
-                                <div className="text-[9px] text-muted-foreground font-semibold">
+                                <div className="text-[9px] text-primary/80 font-bold">
                                   {formatDuration(dur)}
                                 </div>
                               )}
                             </>
+                          ) : !isToday ? (
+                            <div className="flex items-center gap-0.5 text-[9px] text-amber-600 font-medium">
+                              <Timer className="h-2.5 w-2.5 shrink-0" />
+                              <span>No end</span>
+                            </div>
                           ) : (
                             <div className="flex items-center gap-0.5 text-[9px] text-amber-600 font-medium">
                               <Timer className="h-2.5 w-2.5 animate-pulse shrink-0" />
@@ -505,10 +514,29 @@ function toTimeInput(iso: string | null | undefined): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function localTimeToISO(timeStr: string, dateStr: string): string | null {
+  if (!timeStr) return null;
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const [h, m] = timeStr.split(":").map(Number);
+  return new Date(y, mo - 1, d, h, m, 0, 0).toISOString();
+}
+
 function formatDateLabel(dateStr: string) {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+}
+
+function calcDialogDuration(inStr: string, outStr: string): string | null {
+  if (!inStr || !outStr) return null;
+  const [ih, im] = inStr.split(":").map(Number);
+  const [oh, om] = outStr.split(":").map(Number);
+  const mins = (oh * 60 + om) - (ih * 60 + im);
+  if (mins <= 0) return null;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
 }
 
 function DayEditDialog({
@@ -527,10 +555,16 @@ function DayEditDialog({
   const [busy, setBusy] = useState(false);
 
   const hasData = !!session?.clockedInAt;
+  const duration = calcDialogDuration(clockIn, clockOut);
+  const outBeforeIn = clockIn && clockOut && clockOut <= clockIn;
 
   const save = async () => {
-    if (!clockIn && clockOut) {
-      toast.error("Cannot set clock-out without a clock-in time");
+    if (!clockIn) {
+      toast.error("Enter a clock-in time first");
+      return;
+    }
+    if (outBeforeIn) {
+      toast.error("Clock-out must be after clock-in");
       return;
     }
     setBusy(true);
@@ -540,8 +574,8 @@ function DayEditDialog({
         credentials: "include",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          clockedInAt: clockIn || null,
-          clockedOutAt: clockOut || null,
+          clockedInAt: localTimeToISO(clockIn, dateStr),
+          clockedOutAt: clockOut ? localTimeToISO(clockOut, dateStr) : null,
         }),
       });
       if (!r.ok) {
@@ -550,9 +584,8 @@ function DayEditDialog({
         return;
       }
       const data = await r.json();
-      toast.success("Attendance updated");
+      toast.success("Hours saved");
       onSaved(data);
-      onClose();
     } catch {
       toast.error("Could not save");
     } finally {
@@ -572,7 +605,6 @@ function DayEditDialog({
       if (r.ok) {
         toast.success("Entry cleared");
         onSaved(null);
-        onClose();
       } else {
         toast.error("Could not clear");
       }
@@ -587,60 +619,74 @@ function DayEditDialog({
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-sm bg-[#fafaf9]">
         <DialogHeader>
-          <DialogTitle className="text-base">{formatDateLabel(dateStr)}</DialogTitle>
+          <DialogTitle className="text-base font-semibold">{formatDateLabel(dateStr)}</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {hasData ? "Edit your hours for this day" : "Add your hours for this day"}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4 py-1">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <LogIn className="h-3.5 w-3.5 text-emerald-600" />
-              Clock-in time
-            </Label>
-            <Input
-              type="time"
-              value={clockIn}
-              onChange={(e) => setClockIn(e.target.value)}
-              className="h-10"
-            />
+        <div className="space-y-3 py-1">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <LogIn className="h-3 w-3 text-emerald-600" />
+                Started
+              </Label>
+              <Input
+                type="time"
+                value={clockIn}
+                onChange={(e) => setClockIn(e.target.value)}
+                className="h-11 text-base"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <LogOut className="h-3 w-3 text-rose-500" />
+                Finished
+              </Label>
+              <Input
+                type="time"
+                value={clockOut}
+                onChange={(e) => setClockOut(e.target.value)}
+                className="h-11 text-base"
+              />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <LogOut className="h-3.5 w-3.5 text-rose-500" />
-              Clock-out time
-              <span className="font-normal normal-case tracking-normal text-muted-foreground/60">(optional)</span>
-            </Label>
-            <Input
-              type="time"
-              value={clockOut}
-              onChange={(e) => setClockOut(e.target.value)}
-              className="h-10"
-            />
-          </div>
+          {outBeforeIn && (
+            <p className="text-xs text-destructive font-medium flex items-center gap-1.5">
+              <span>Finish time must be after start time</span>
+            </p>
+          )}
+
+          {duration && !outBeforeIn && (
+            <div className="bg-primary/8 rounded-xl px-4 py-3 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Total time</span>
+              <span className="font-bold text-primary text-lg">{duration}</span>
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-row gap-2 pt-1">
           {hasData && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+              className="gap-1.5 text-muted-foreground hover:text-destructive mr-auto"
               onClick={clear}
               disabled={busy}
             >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Clear entry
+              <Trash2 className="h-3.5 w-3.5" />
+              Clear
             </Button>
           )}
-          <div className="flex gap-2 sm:ml-auto">
-            <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={save} disabled={busy} className="gap-1.5">
-              {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Save
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={save} disabled={busy || !!outBeforeIn || !clockIn} className="gap-1.5 min-w-[70px]">
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
