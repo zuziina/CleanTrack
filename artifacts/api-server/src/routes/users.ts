@@ -25,6 +25,7 @@ function formatUser(user: any) {
     role,
     firstName: user.firstName || null,
     lastName: user.lastName || null,
+    companyId: (user.publicMetadata?.companyId as number) ?? null,
   };
 }
 
@@ -36,8 +37,12 @@ router.get("/", requireAuth, async (req: any, res) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const { data: users } = await clerkClient.users.getUserList({ limit: 100 });
-    res.json(users.map(formatUser));
+    const myCompanyId = (meUser.publicMetadata?.companyId as number) ?? null;
+    const { data: users } = await clerkClient.users.getUserList({ limit: 500 });
+    const companyUsers = myCompanyId
+      ? users.filter((u) => (u.publicMetadata?.companyId as number) === myCompanyId)
+      : [];
+    res.json(companyUsers.map(formatUser));
   } catch (err) {
     req.log.error({ err }, "Failed to list users");
     res.status(500).json({ error: "Internal server error" });

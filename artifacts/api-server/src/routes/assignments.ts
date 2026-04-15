@@ -12,22 +12,25 @@ import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
+async function requireAuthAndCompany(req: any, res: any, next: any) {
   const auth = getAuth(req);
   if (!auth?.userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   req.clerkUserId = auth.userId;
-  next();
-}
-
-async function getUserRole(clerkUserId: string): Promise<string> {
   try {
-    const user = await clerkClient.users.getUser(clerkUserId);
-    return (user.publicMetadata?.role as string) || "employee";
-  } catch {
-    return "employee";
+    const user = await clerkClient.users.getUser(auth.userId);
+    const companyId = user.publicMetadata?.companyId as number | undefined;
+    if (!companyId) {
+      res.status(403).json({ error: "No company setup. Please complete company setup first." });
+      return;
+    }
+    req.companyId = companyId;
+    req.userRole = (user.publicMetadata?.role as string) || "employee";
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -65,24 +68,27 @@ async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect;
   };
 }
 
-router.get("/today", requireAuth, async (req: any, res) => {
+router.get("/today", requireAuthAndCompany, async (req: any, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const role = await getUserRole(req.clerkUserId);
     let rows;
-    if (role === "boss") {
+    if (req.userRole === "boss") {
       rows = await db
         .select()
         .from(assignmentsTable)
         .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
-        .where(eq(assignmentsTable.date, today))
+        .where(and(eq(assignmentsTable.date, today), eq(assignmentsTable.companyId, req.companyId)))
         .orderBy(assignmentsTable.timeSlot);
     } else {
       rows = await db
         .select()
         .from(assignmentsTable)
         .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
-        .where(and(eq(assignmentsTable.date, today), eq(assignmentsTable.assignedToClerkId, req.clerkUserId)))
+        .where(and(
+          eq(assignmentsTable.date, today),
+          eq(assignmentsTable.assignedToClerkId, req.clerkUserId),
+          eq(assignmentsTable.companyId, req.companyId),
+        ))
         .orderBy(assignmentsTable.timeSlot);
     }
     res.json(await Promise.all(rows.map(formatRow)));
@@ -92,22 +98,25 @@ router.get("/today", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/", requireAuth, async (req: any, res) => {
+router.get("/", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const role = await getUserRole(req.clerkUserId);
     let rows;
-    if (role === "boss") {
+    if (req.userRole === "boss") {
       rows = await db
         .select()
         .from(assignmentsTable)
         .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
+        .where(eq(assignmentsTable.companyId, req.companyId))
         .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
     } else {
       rows = await db
         .select()
         .from(assignmentsTable)
         .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
-        .where(eq(assignmentsTable.assignedToClerkId, req.clerkUserId))
+        .where(and(
+          eq(assignmentsTable.assignedToClerkId, req.clerkUserId),
+          eq(assignmentsTable.companyId, req.companyId),
+        ))
         .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
     }
     res.json(await Promise.all(rows.map(formatRow)));
@@ -117,10 +126,9 @@ router.get("/", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const role = await getUserRole(req.clerkUserId);
-    if (role !== "boss") {
+    if (req.userRole !== "boss") {
       res.status(403).json({ error: "Only bosses can create assignments" });
       return;
     }
@@ -134,6 +142,7 @@ router.post("/", requireAuth, async (req: any, res) => {
       ...parsed.data,
       date: parsed.data.date ?? today,
       timeSlot: parsed.data.timeSlot ?? "",
+      companyId: req.companyId,
     };
     const [a] = await db.insert(assignmentsTable).values(values).returning();
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
@@ -148,7 +157,7 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/:id", requireAuth, async (req: any, res) => {
+router.get("/:id", requireAuthAndCompany, async (req: any, res) => {
   try {
     const parsed = GetAssignmentParams.safeParse({ id: Number(req.params.id) });
     if (!parsed.success) {
@@ -159,7 +168,7 @@ router.get("/:id", requireAuth, async (req: any, res) => {
       .select()
       .from(assignmentsTable)
       .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
-      .where(eq(assignmentsTable.id, parsed.data.id));
+      .where(and(eq(assignmentsTable.id, parsed.data.id), eq(assignmentsTable.companyId, req.companyId)));
     if (!rows[0]) {
       res.status(404).json({ error: "Assignment not found" });
       return;
@@ -171,7 +180,7 @@ router.get("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-router.put("/:id", requireAuth, async (req: any, res) => {
+router.put("/:id", requireAuthAndCompany, async (req: any, res) => {
   try {
     const paramsParsed = UpdateAssignmentParams.safeParse({ id: Number(req.params.id) });
     if (!paramsParsed.success) {
@@ -185,8 +194,8 @@ router.put("/:id", requireAuth, async (req: any, res) => {
     }
     const [a] = await db
       .update(assignmentsTable)
-      .set(bodyParsed.data)
-      .where(eq(assignmentsTable.id, paramsParsed.data.id))
+      .set(bodyParsed.data as any)
+      .where(and(eq(assignmentsTable.id, paramsParsed.data.id), eq(assignmentsTable.companyId, req.companyId)))
       .returning();
     if (!a) {
       res.status(404).json({ error: "Assignment not found" });
@@ -204,7 +213,7 @@ router.put("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch("/:id/timing", requireAuth, async (req: any, res) => {
+router.patch("/:id/timing", requireAuthAndCompany, async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
@@ -216,8 +225,10 @@ router.patch("/:id/timing", requireAuth, async (req: any, res) => {
     if ("finishedAt" in req.body) {
       updates.finishedAt = finishedAt ? new Date(finishedAt) : null;
     }
-    // Derive status from the resulting state
-    const [current] = await db.select().from(assignmentsTable).where(eq(assignmentsTable.id, id));
+    const [current] = await db
+      .select()
+      .from(assignmentsTable)
+      .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)));
     if (!current) { res.status(404).json({ error: "Assignment not found" }); return; }
     const effectiveStartedAt = "startedAt" in updates ? updates.startedAt : current.startedAt;
     const effectiveFinishedAt = "finishedAt" in updates ? updates.finishedAt : current.finishedAt;
@@ -234,14 +245,14 @@ router.patch("/:id/timing", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/:id/start", requireAuth, async (req: any, res) => {
+router.post("/:id/start", requireAuthAndCompany, async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [a] = await db
       .update(assignmentsTable)
       .set({ startedAt: new Date(), status: "in_progress" })
-      .where(eq(assignmentsTable.id, id))
+      .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)))
       .returning();
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
@@ -253,14 +264,14 @@ router.post("/:id/start", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/:id/finish", requireAuth, async (req: any, res) => {
+router.post("/:id/finish", requireAuthAndCompany, async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
     const [a] = await db
       .update(assignmentsTable)
       .set({ finishedAt: new Date(), status: "completed" })
-      .where(eq(assignmentsTable.id, id))
+      .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)))
       .returning();
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
@@ -272,10 +283,9 @@ router.post("/:id/finish", requireAuth, async (req: any, res) => {
   }
 });
 
-router.delete("/:id", requireAuth, async (req: any, res) => {
+router.delete("/:id", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const role = await getUserRole(req.clerkUserId);
-    if (role !== "boss") {
+    if (req.userRole !== "boss") {
       res.status(403).json({ error: "Only bosses can delete assignments" });
       return;
     }
@@ -284,7 +294,9 @@ router.delete("/:id", requireAuth, async (req: any, res) => {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
-    await db.delete(assignmentsTable).where(eq(assignmentsTable.id, parsed.data.id));
+    await db
+      .delete(assignmentsTable)
+      .where(and(eq(assignmentsTable.id, parsed.data.id), eq(assignmentsTable.companyId, req.companyId)));
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete assignment");

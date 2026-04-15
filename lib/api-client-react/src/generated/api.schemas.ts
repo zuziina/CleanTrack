@@ -23,6 +23,22 @@ export interface AppUser {
   role: AppUserRole;
   firstName?: string | null;
   lastName?: string | null;
+  companyId?: number | null;
+}
+
+export interface Company {
+  id: number;
+  name: string;
+  inviteCode: string;
+  createdAt: string;
+}
+
+export interface CreateCompanyBody {
+  name: string;
+}
+
+export interface JoinCompanyBody {
+  inviteCode: string;
 }
 
 export type SetRoleBodyRole =

@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: users
     description: User management operations
+  - name: companies
+    description: Company management operations
   - name: houses
     description: House operations
   - name: assignments
@@ -76,6 +78,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppUser"
+
+  /companies:
+    post:
+      operationId: createCompany
+      tags: [companies]
+      summary: Create a new company (boss only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompanyBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+
+  /companies/me:
+    get:
+      operationId: getMyCompany
+      tags: [companies]
+      summary: Get current user's company info
+      responses:
+        "200":
+          description: Company info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+
+  /companies/join:
+    post:
+      operationId: joinCompany
+      tags: [companies]
+      summary: Join a company with invite code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinCompanyBody"
+      responses:
+        "200":
+          description: Joined company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
 
   /assignments:
     get:
@@ -395,11 +448,47 @@ components:
         lastName:
           type: string
           nullable: true
+        companyId:
+          type: integer
+          nullable: true
       required:
         - clerkId
         - username
         - email
         - role
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        inviteCode:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - inviteCode
+        - createdAt
+
+    CreateCompanyBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    JoinCompanyBody:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+      required:
+        - inviteCode
 
     SetRoleBody:
       type: object

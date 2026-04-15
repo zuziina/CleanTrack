@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db, housesTable, assignmentsTable } from "@workspace/db";
 import {
   CreateHouseBody,
@@ -10,18 +10,29 @@ import {
   UpdateHouseNotesParams,
   UpdateHouseNotesBody,
 } from "@workspace/api-zod";
-import { eq, count } from "drizzle-orm";
+import { eq, count, and } from "drizzle-orm";
 
 const router = Router();
 
-function requireAuth(req: any, res: any, next: any) {
+async function requireAuthAndCompany(req: any, res: any, next: any) {
   const auth = getAuth(req);
   if (!auth?.userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   req.clerkUserId = auth.userId;
-  next();
+  try {
+    const user = await clerkClient.users.getUser(auth.userId);
+    const companyId = user.publicMetadata?.companyId as number | undefined;
+    if (!companyId) {
+      res.status(403).json({ error: "No company setup. Please complete company setup first." });
+      return;
+    }
+    req.companyId = companyId;
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
 }
 
 function formatHouse(h: typeof housesTable.$inferSelect) {
@@ -45,16 +56,16 @@ function formatHouse(h: typeof housesTable.$inferSelect) {
   };
 }
 
-router.get("/stats", requireAuth, async (req: any, res) => {
+router.get("/stats", requireAuthAndCompany, async (req: any, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    const all = await db.select().from(housesTable);
+    const all = await db.select().from(housesTable).where(eq(housesTable.companyId, req.companyId));
     const active = all.filter((h) => h.status === "active").length;
     const inactive = all.filter((h) => h.status === "inactive").length;
     const todayAssignments = await db
       .select({ count: count() })
       .from(assignmentsTable)
-      .where(eq(assignmentsTable.date, today));
+      .where(and(eq(assignmentsTable.date, today), eq(assignmentsTable.companyId, req.companyId)));
     res.json({
       total: all.length,
       active,
@@ -70,9 +81,13 @@ router.get("/stats", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/", requireAuth, async (req: any, res) => {
+router.get("/", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const houses = await db.select().from(housesTable).orderBy(housesTable.name);
+    const houses = await db
+      .select()
+      .from(housesTable)
+      .where(eq(housesTable.companyId, req.companyId))
+      .orderBy(housesTable.name);
     res.json(houses.map(formatHouse));
   } catch (err) {
     req.log.error({ err }, "Failed to list houses");
@@ -80,7 +95,7 @@ router.get("/", requireAuth, async (req: any, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req: any, res) => {
+router.post("/", requireAuthAndCompany, async (req: any, res) => {
   try {
     const parsed = CreateHouseBody.safeParse(req.body);
     if (!parsed.success) {
@@ -90,6 +105,7 @@ router.post("/", requireAuth, async (req: any, res) => {
     const [h] = await db.insert(housesTable).values({
       ...parsed.data,
       ownerName: parsed.data.ownerName ?? "",
+      companyId: req.companyId,
     }).returning();
     res.status(201).json(formatHouse(h));
   } catch (err) {
@@ -98,7 +114,7 @@ router.post("/", requireAuth, async (req: any, res) => {
   }
 });
 
-router.patch("/:id/notes", requireAuth, async (req: any, res) => {
+router.patch("/:id/notes", requireAuthAndCompany, async (req: any, res) => {
   try {
     const paramsParsed = UpdateHouseNotesParams.safeParse({ id: Number(req.params.id) });
     if (!paramsParsed.success) {
@@ -113,7 +129,7 @@ router.patch("/:id/notes", requireAuth, async (req: any, res) => {
     const [h] = await db
       .update(housesTable)
       .set({ notes: bodyParsed.data.notes })
-      .where(eq(housesTable.id, paramsParsed.data.id))
+      .where(and(eq(housesTable.id, paramsParsed.data.id), eq(housesTable.companyId, req.companyId)))
       .returning();
     if (!h) {
       res.status(404).json({ error: "House not found" });
@@ -126,14 +142,17 @@ router.patch("/:id/notes", requireAuth, async (req: any, res) => {
   }
 });
 
-router.get("/:id", requireAuth, async (req: any, res) => {
+router.get("/:id", requireAuthAndCompany, async (req: any, res) => {
   try {
     const parsed = GetHouseParams.safeParse({ id: Number(req.params.id) });
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
-    const [h] = await db.select().from(housesTable).where(eq(housesTable.id, parsed.data.id));
+    const [h] = await db
+      .select()
+      .from(housesTable)
+      .where(and(eq(housesTable.id, parsed.data.id), eq(housesTable.companyId, req.companyId)));
     if (!h) {
       res.status(404).json({ error: "House not found" });
       return;
@@ -145,7 +164,7 @@ router.get("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-router.put("/:id", requireAuth, async (req: any, res) => {
+router.put("/:id", requireAuthAndCompany, async (req: any, res) => {
   try {
     const paramsParsed = UpdateHouseParams.safeParse({ id: Number(req.params.id) });
     if (!paramsParsed.success) {
@@ -160,7 +179,7 @@ router.put("/:id", requireAuth, async (req: any, res) => {
     const [h] = await db
       .update(housesTable)
       .set(bodyParsed.data)
-      .where(eq(housesTable.id, paramsParsed.data.id))
+      .where(and(eq(housesTable.id, paramsParsed.data.id), eq(housesTable.companyId, req.companyId)))
       .returning();
     if (!h) {
       res.status(404).json({ error: "House not found" });
@@ -173,16 +192,17 @@ router.put("/:id", requireAuth, async (req: any, res) => {
   }
 });
 
-router.delete("/:id", requireAuth, async (req: any, res) => {
+router.delete("/:id", requireAuthAndCompany, async (req: any, res) => {
   try {
     const parsed = DeleteHouseParams.safeParse({ id: Number(req.params.id) });
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
-    // Delete linked assignments first to satisfy the foreign key constraint
     await db.delete(assignmentsTable).where(eq(assignmentsTable.houseId, parsed.data.id));
-    await db.delete(housesTable).where(eq(housesTable.id, parsed.data.id));
+    await db
+      .delete(housesTable)
+      .where(and(eq(housesTable.id, parsed.data.id), eq(housesTable.companyId, req.companyId)));
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete house");

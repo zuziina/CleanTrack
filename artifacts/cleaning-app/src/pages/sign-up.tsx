@@ -56,7 +56,7 @@ export default function SignUpPage() {
           // role will be set on profile load if this fails
         }
         sessionStorage.setItem("roleChosen", "true");
-        setLocation("/profile");
+        setLocation("/setup-company");
       } else {
         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
         setStep("verify");
@@ -98,7 +98,7 @@ export default function SignUpPage() {
           // role will be set on next profile load if this fails
         }
         sessionStorage.setItem("roleChosen", "true");
-        setLocation("/profile");
+        setLocation("/setup-company");
       } else {
         setError("Verification incomplete. Please try again.");
       }

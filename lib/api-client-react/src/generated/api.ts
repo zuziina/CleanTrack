@@ -19,11 +19,14 @@ import type {
 import type {
   AppUser,
   Assignment,
+  Company,
   CreateAssignmentBody,
+  CreateCompanyBody,
   CreateHouseBody,
   HealthStatus,
   House,
   HouseStats,
+  JoinCompanyBody,
   PatchTimingBody,
   SetRoleBody,
   UpdateAssignmentBody,
@@ -327,6 +330,251 @@ export const useSetUserRole = <
   TContext
 > => {
   return useMutation(getSetUserRoleMutationOptions(options));
+};
+
+/**
+ * @summary Create a new company (boss only)
+ */
+export const getCreateCompanyUrl = () => {
+  return `/api/companies`;
+};
+
+export const createCompany = async (
+  createCompanyBody: CreateCompanyBody,
+  options?: RequestInit,
+): Promise<Company> => {
+  return customFetch<Company>(getCreateCompanyUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCompanyBody),
+  });
+};
+
+export const getCreateCompanyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCompany>>,
+    TError,
+    { data: BodyType<CreateCompanyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCompany>>,
+  TError,
+  { data: BodyType<CreateCompanyBody> },
+  TContext
+> => {
+  const mutationKey = ["createCompany"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCompany>>,
+    { data: BodyType<CreateCompanyBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCompany(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCompanyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCompany>>
+>;
+export type CreateCompanyMutationBody = BodyType<CreateCompanyBody>;
+export type CreateCompanyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new company (boss only)
+ */
+export const useCreateCompany = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCompany>>,
+    TError,
+    { data: BodyType<CreateCompanyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCompany>>,
+  TError,
+  { data: BodyType<CreateCompanyBody> },
+  TContext
+> => {
+  return useMutation(getCreateCompanyMutationOptions(options));
+};
+
+/**
+ * @summary Get current user's company info
+ */
+export const getGetMyCompanyUrl = () => {
+  return `/api/companies/me`;
+};
+
+export const getMyCompany = async (options?: RequestInit): Promise<Company> => {
+  return customFetch<Company>(getGetMyCompanyUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyCompanyQueryKey = () => {
+  return [`/api/companies/me`] as const;
+};
+
+export const getGetMyCompanyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyCompany>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCompany>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyCompanyQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyCompany>>> = ({
+    signal,
+  }) => getMyCompany({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCompany>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyCompanyQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyCompany>>
+>;
+export type GetMyCompanyQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current user's company info
+ */
+
+export function useGetMyCompany<
+  TData = Awaited<ReturnType<typeof getMyCompany>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyCompany>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyCompanyQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Join a company with invite code
+ */
+export const getJoinCompanyUrl = () => {
+  return `/api/companies/join`;
+};
+
+export const joinCompany = async (
+  joinCompanyBody: JoinCompanyBody,
+  options?: RequestInit,
+): Promise<Company> => {
+  return customFetch<Company>(getJoinCompanyUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(joinCompanyBody),
+  });
+};
+
+export const getJoinCompanyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinCompany>>,
+    TError,
+    { data: BodyType<JoinCompanyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinCompany>>,
+  TError,
+  { data: BodyType<JoinCompanyBody> },
+  TContext
+> => {
+  const mutationKey = ["joinCompany"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinCompany>>,
+    { data: BodyType<JoinCompanyBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return joinCompany(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinCompanyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinCompany>>
+>;
+export type JoinCompanyMutationBody = BodyType<JoinCompanyBody>;
+export type JoinCompanyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Join a company with invite code
+ */
+export const useJoinCompany = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinCompany>>,
+    TError,
+    { data: BodyType<JoinCompanyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinCompany>>,
+  TError,
+  { data: BodyType<JoinCompanyBody> },
+  TContext
+> => {
+  return useMutation(getJoinCompanyMutationOptions(options));
 };
 
 /**

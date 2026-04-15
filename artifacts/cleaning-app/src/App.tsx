@@ -1,14 +1,16 @@
-import { ClerkProvider, SignIn, Show, useClerk } from '@clerk/react';
+import { ClerkProvider, SignIn, Show, useClerk, useUser } from '@clerk/react';
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wouter';
 import { useEffect, useRef } from 'react';
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Loader2 } from "lucide-react";
 
 import Home from "@/pages/home";
 import SignUpPage from "@/pages/sign-up";
 import SetupRolePage from "@/pages/setup-role";
+import SetupCompanyPage from "@/pages/setup-company";
 import ProfilePage from "@/pages/profile";
 import HousesPage from "@/pages/houses";
 import NotFound from "@/pages/not-found";
@@ -50,13 +52,34 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return (
     <>
       <Show when="signed-in">
-        <Component />
+        <CompanyGuard>
+          <Component />
+        </CompanyGuard>
       </Show>
       <Show when="signed-out">
         <Redirect to="/" />
       </Show>
     </>
   );
+}
+
+function CompanyGuard({ children }: { children: React.ReactNode }) {
+  const { user, isLoaded } = useUser();
+
+  if (!isLoaded) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const companyId = user?.publicMetadata?.companyId as number | undefined;
+  if (!companyId) {
+    return <Redirect to="/setup-company" />;
+  }
+
+  return <>{children}</>;
 }
 
 function ClerkQueryClientCacheInvalidator() {
@@ -99,6 +122,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
             <Route path="/setup-role" component={SetupRolePage} />
+            <Route path="/setup-company" component={SetupCompanyPage} />
             <Route path="/profile">
               <ProtectedRoute component={ProfilePage} />
             </Route>

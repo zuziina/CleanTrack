@@ -24,6 +24,7 @@ export const ListUsersResponseItem = zod.object({
   role: zod.enum(["boss", "employee"]),
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
+  companyId: zod.number().nullish(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
@@ -37,6 +38,7 @@ export const GetMeResponse = zod.object({
   role: zod.enum(["boss", "employee"]),
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
+  companyId: zod.number().nullish(),
 });
 
 /**
@@ -53,6 +55,38 @@ export const SetUserRoleResponse = zod.object({
   role: zod.enum(["boss", "employee"]),
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
+  companyId: zod.number().nullish(),
+});
+
+/**
+ * @summary Create a new company (boss only)
+ */
+export const CreateCompanyBody = zod.object({
+  name: zod.string(),
+});
+
+/**
+ * @summary Get current user's company info
+ */
+export const GetMyCompanyResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  inviteCode: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Join a company with invite code
+ */
+export const JoinCompanyBody = zod.object({
+  inviteCode: zod.string(),
+});
+
+export const JoinCompanyResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  inviteCode: zod.string(),
+  createdAt: zod.string(),
 });
 
 /**

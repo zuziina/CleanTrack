@@ -1,9 +1,11 @@
 import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { companiesTable } from "./companies";
 
 export const housesTable = pgTable("houses", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companiesTable.id),
   name: text("name").notNull(),
   mapLink: text("map_link"),
   ownerName: text("owner_name").notNull(),

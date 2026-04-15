@@ -1,6 +1,7 @@
 import { Layout } from "@/components/layout";
 import {
   useGetMe,
+  useGetMyCompany,
   useGetTodayAssignments,
   useListUsers,
   useListHouses,
@@ -50,6 +51,9 @@ import {
   AlarmClock,
   Waves,
   Flame,
+  Copy,
+  Check,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
@@ -151,9 +155,68 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {isBoss ? <BossDashboard /> : <EmployeeDashboard />}
+        {isBoss ? (
+          <>
+            <BossCompanyCard />
+            <BossDashboard />
+          </>
+        ) : (
+          <EmployeeDashboard />
+        )}
       </div>
     </Layout>
+  );
+}
+
+function BossCompanyCard() {
+  const { data: company, isLoading } = useGetMyCompany();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!company?.inviteCode) return;
+    navigator.clipboard.writeText(company.inviteCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (isLoading) {
+    return <Skeleton className="h-20 w-full rounded-xl" />;
+  }
+
+  if (!company) return null;
+
+  return (
+    <Card className="border bg-[#fafaf9] shadow-sm">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="bg-primary/10 p-2.5 rounded-lg shrink-0">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Company</p>
+              <p className="font-semibold text-foreground truncate">{company.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Invite Code</p>
+              <p className="font-mono font-bold tracking-widest text-foreground">{company.inviteCode}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={handleCopy}
+              title="Copy invite code"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -17,7 +17,7 @@ export default function SetupRolePage() {
         data: { role }
       });
       sessionStorage.setItem("roleChosen", "true");
-      setLocation("/profile");
+      setLocation("/setup-company");
     } catch (err) {
       toast.error("Error", {
         description: "Failed to set role. Please try again.",

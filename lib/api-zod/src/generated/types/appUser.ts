@@ -14,4 +14,5 @@ export interface AppUser {
   role: AppUserRole;
   firstName?: string | null;
   lastName?: string | null;
+  companyId?: number | null;
 }
