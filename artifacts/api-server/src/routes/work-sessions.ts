@@ -20,6 +20,7 @@ async function requireAuthAndCompany(req: any, res: any, next: any) {
       return;
     }
     req.companyId = companyId;
+    req.userRole = (user.publicMetadata?.role as string) || "employee";
     next();
   } catch {
     res.status(500).json({ error: "Internal server error" });
