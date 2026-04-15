@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db, workSessionsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 const router = Router();
 
@@ -29,6 +29,75 @@ async function requireAuthAndCompany(req: any, res: any, next: any) {
 function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
+
+router.get("/", requireAuthAndCompany, async (req: any, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ error: "month must be YYYY-MM" });
+      return;
+    }
+    const firstDay = `${month}-01`;
+    const lastDay = `${month}-31`;
+
+    let rows;
+    if (req.userRole === "boss") {
+      rows = await db
+        .select()
+        .from(workSessionsTable)
+        .where(
+          and(
+            eq(workSessionsTable.companyId, req.companyId),
+            gte(workSessionsTable.date, firstDay),
+            lte(workSessionsTable.date, lastDay),
+          )
+        )
+        .orderBy(workSessionsTable.date);
+    } else {
+      rows = await db
+        .select()
+        .from(workSessionsTable)
+        .where(
+          and(
+            eq(workSessionsTable.clerkUserId, req.clerkUserId),
+            eq(workSessionsTable.companyId, req.companyId),
+            gte(workSessionsTable.date, firstDay),
+            lte(workSessionsTable.date, lastDay),
+          )
+        )
+        .orderBy(workSessionsTable.date);
+    }
+
+    const enriched = await Promise.all(
+      rows.map(async (s) => {
+        let username: string | null = null;
+        try {
+          const u = await clerkClient.users.getUser(s.clerkUserId);
+          username =
+            (u.unsafeMetadata?.displayName as string) ||
+            u.username ||
+            u.firstName ||
+            u.emailAddresses?.[0]?.emailAddress?.split("@")[0] ||
+            null;
+        } catch {}
+        return {
+          id: s.id,
+          clerkUserId: s.clerkUserId,
+          username,
+          date: s.date,
+          clockedInAt: s.clockedInAt?.toISOString() ?? null,
+          clockedOutAt: s.clockedOutAt?.toISOString() ?? null,
+          createdAt: s.createdAt.toISOString(),
+        };
+      })
+    );
+
+    res.json(enriched);
+  } catch (err) {
+    req.log.error({ err }, "Failed to list work sessions");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/today", requireAuthAndCompany, async (req: any, res) => {
   try {
