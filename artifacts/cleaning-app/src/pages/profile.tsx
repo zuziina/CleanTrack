@@ -99,6 +99,13 @@ const MONTH_NAMES = [
   "July","August","September","October","November","December",
 ];
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function ProfilePage() {
   const { data: user, isLoading: userLoading } = useGetMe();
 
@@ -107,10 +114,10 @@ export default function ProfilePage() {
       <Layout>
         <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <Skeleton className="h-20 w-20 rounded-full" />
+            <Skeleton className="h-16 w-16 rounded-full" />
             <div className="space-y-2">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
             </div>
           </div>
           <Skeleton className="h-[400px] w-full rounded-xl" />
@@ -124,33 +131,35 @@ export default function ProfilePage() {
   const isBoss = user.role === "boss";
   const displayName = user.username || user.firstName || user.email.split("@")[0];
   const initials = displayName.charAt(0).toUpperCase();
+  const greeting = getGreeting();
 
   return (
     <Layout>
-      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in duration-300">
-        <div className="flex items-center gap-5">
-          <Avatar className="h-20 w-20 border-4 border-card shadow-sm shrink-0">
-            <AvatarFallback className="text-2xl bg-primary text-primary-foreground uppercase">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 animate-in fade-in zoom-in duration-300">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-14 w-14 border-2 border-border shadow-sm shrink-0">
+            <AvatarFallback className="text-xl bg-primary text-primary-foreground uppercase font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="space-y-2 min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground truncate">
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground font-medium">{greeting}</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground truncate leading-tight">
               {displayName}
             </h1>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               {isBoss ? (
-                <Badge className="gap-1.5 px-3 py-1 text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white border-none rounded-full">
-                  <Crown className="h-3.5 w-3.5" />
+                <Badge className="gap-1 px-2 py-0.5 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white border-none rounded-full">
+                  <Crown className="h-3 w-3" />
                   Boss
                 </Badge>
               ) : (
-                <Badge className="gap-1.5 px-3 py-1 text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-none rounded-full">
-                  <UserCheck className="h-3.5 w-3.5" />
+                <Badge className="gap-1 px-2 py-0.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-none rounded-full">
+                  <UserCheck className="h-3 w-3" />
                   Employee
                 </Badge>
               )}
-              <span className="text-sm text-muted-foreground truncate">{user.email}</span>
+              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
             </div>
           </div>
         </div>
@@ -225,33 +234,23 @@ function EmployeeDashboard() {
   const { data: assignments, isLoading } = useGetTodayAssignments();
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
 
-  const formatted = today.toLocaleDateString("en-US", {
+  const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "long",
-    year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  return (
-    <div className="space-y-6">
-      <Card className="bg-primary text-primary-foreground border-none shadow-md">
-        <CardContent className="p-5 flex items-center gap-4">
-          <div className="bg-white/15 rounded-xl p-3">
-            <Calendar className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="text-primary-foreground/70 text-sm font-medium uppercase tracking-wider">
-              Today
-            </p>
-            <p className="text-xl font-bold">{formatted}</p>
-          </div>
-        </CardContent>
-      </Card>
+  const count = assignments?.length ?? 0;
 
-      <div className="flex items-center justify-between border-b border-border/50 pb-3">
-        <h2 className="text-xl font-semibold tracking-tight">My Assignments</h2>
-        <Badge variant="outline">
-          {assignments?.length ?? 0} today
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Today's Assignments</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{formattedDate}</p>
+        </div>
+        <Badge variant="outline" className="text-sm px-3 py-1 font-semibold">
+          {count} {count === 1 ? "job" : "jobs"}
         </Badge>
       </div>
 
@@ -362,31 +361,10 @@ function BossDashboard() {
   };
 
   return (
-    <div className="space-y-7">
-      <Card className="bg-amber-500 text-white border-none shadow-md">
-        <CardContent className="p-5 flex items-center gap-4">
-          <div className="bg-white/15 rounded-xl p-3">
-            <Crown className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="text-white/70 text-sm font-medium uppercase tracking-wider">
-              Today
-            </p>
-            <p className="text-xl font-bold">
-              {today.toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
+    <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Schedule Calendar</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Schedule</h2>
           <div className="flex items-center gap-2">
             <Button size="icon" variant="outline" className="h-8 w-8" onClick={prevWeek}>
               <ChevronLeft className="h-4 w-4" />

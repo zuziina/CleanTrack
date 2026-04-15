@@ -121,81 +121,62 @@ export default function HousesPage() {
   return (
     <Layout>
       <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Properties</h1>
-            <p className="text-muted-foreground mt-1">
-              {isManageMode
-                ? "Manage mode — edit or add properties."
-                : "Manage and view all cleaning locations."}
+            <h1 className="text-2xl font-bold tracking-tight">Properties</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {isManageMode ? "Click a property to edit it" : "All your cleaning locations"}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {isManageMode ? (
               <>
-                <Button onClick={() => setShowAddModal(true)} className="gap-2">
-                  <Plus className="h-4 w-4" /> Add Property
+                <Button size="sm" onClick={() => setShowAddModal(true)} className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" /> Add
                 </Button>
                 <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setIsManageMode(false)}
-                  className="gap-2 border-primary text-primary hover:bg-primary/5"
+                  className="gap-1.5 border-primary text-primary hover:bg-primary/5"
                 >
-                  <CheckCircle2 className="h-4 w-4" /> Done
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Done
                 </Button>
               </>
             ) : (
               <Button
+                size="sm"
                 variant="outline"
                 onClick={() => setIsManageMode(true)}
-                className="gap-2"
+                className="gap-1.5"
               >
-                <Pencil className="h-4 w-4" /> Manage
+                <Pencil className="h-3.5 w-3.5" /> Manage
               </Button>
             )}
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-primary text-primary-foreground border-none">
-            <CardContent className="p-4">
-              <div className="text-primary-foreground/80 text-sm font-medium mb-1">
-                Total Properties
-              </div>
-              <div className="text-3xl font-bold">{stats?.total || 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-sm font-medium mb-1 flex items-center gap-1.5">
-                <Activity size={14} /> Active
-              </div>
-              <div className="text-3xl font-bold text-foreground">
-                {stats?.active || 0}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-sm font-medium mb-1 flex items-center gap-1.5">
-                <CalendarDays size={14} /> Jobs Today
-              </div>
-              <div className="text-3xl font-bold text-foreground">
-                {stats?.totalAssignmentsToday || 0}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-sm font-medium mb-1 flex items-center gap-1.5">
-                <Activity size={14} /> Inactive
-              </div>
-              <div className="text-3xl font-bold text-foreground">
-                {stats?.inactive || 0}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Total", value: stats?.total || 0, highlight: true },
+            { label: "Active", value: stats?.active || 0, icon: <Activity size={13} /> },
+            { label: "Jobs Today", value: stats?.totalAssignmentsToday || 0, icon: <CalendarDays size={13} /> },
+            { label: "Inactive", value: stats?.inactive || 0, icon: <XCircle size={13} /> },
+          ].map(({ label, value, highlight, icon }) => (
+            <Card key={label} className={highlight ? "bg-primary text-primary-foreground border-none" : ""}>
+              <CardContent className="px-4 py-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className={cn("text-xs font-medium flex items-center gap-1", highlight ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                    {icon}{label}
+                  </div>
+                  <div className={cn("text-2xl font-bold leading-tight mt-0.5", highlight ? "" : "text-foreground")}>
+                    {value}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Filters */}
@@ -204,33 +185,26 @@ export default function HousesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search properties or owners..."
-              className="pl-9 bg-background border-border/50"
+              className="pl-9 bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant={statusFilter === "all" ? "default" : "outline"}
-              onClick={() => setStatusFilter("all")}
-              className="h-10 px-4"
-            >
-              All
-            </Button>
-            <Button
-              variant={statusFilter === "active" ? "default" : "outline"}
-              onClick={() => setStatusFilter("active")}
-              className="h-10 px-4"
-            >
-              Active
-            </Button>
-            <Button
-              variant={statusFilter === "inactive" ? "default" : "outline"}
-              onClick={() => setStatusFilter("inactive")}
-              className="h-10 px-4"
-            >
-              Inactive
-            </Button>
+          <div className="flex gap-1.5 bg-secondary rounded-lg p-1 self-start md:self-auto">
+            {(["all", "active", "inactive"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setStatusFilter(f)}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium transition-all capitalize",
+                  statusFilter === f
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {f}
+              </button>
+            ))}
           </div>
         </div>
 
