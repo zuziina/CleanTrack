@@ -1467,7 +1467,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden bg-[#fafaf9] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[580px] p-0 bg-[#fafaf9] max-h-[90dvh] overflow-y-auto">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
             <DialogHeader>

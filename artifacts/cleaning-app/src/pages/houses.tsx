@@ -10,6 +10,8 @@ import {
   getGetHouseQueryKey,
   getListHousesQueryKey,
   getGetHouseStatsQueryKey,
+  getListAssignmentsQueryKey,
+  getGetTodayAssignmentsQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -624,6 +626,8 @@ function EditHouseModal({
           toast.success("Property deleted");
           qc.invalidateQueries({ queryKey: getListHousesQueryKey() });
           qc.invalidateQueries({ queryKey: getGetHouseStatsQueryKey() });
+          qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+          qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
           setShowDeleteConfirm(false);
           onClose();
         },

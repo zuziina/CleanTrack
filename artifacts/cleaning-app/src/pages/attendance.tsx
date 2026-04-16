@@ -240,7 +240,7 @@ function EmployeeAttendance() {
     if (todayState.session !== undefined) {
       refetch();
     }
-  }, [todayState.session]);
+  }, [todayState.session, refetch]);
 
   const handleDaySaved = useCallback((dateStr: string, updated: WorkSession | null) => {
     refetch();

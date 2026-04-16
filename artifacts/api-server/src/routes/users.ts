@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { clerkClient } from "@clerk/express";
 import { SetUserRoleBody } from "@workspace/api-zod";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireAuthAndCompany } from "../lib/auth";
 
 const router = Router();
 
@@ -21,19 +21,16 @@ function formatUser(user: any) {
   };
 }
 
-router.get("/", requireAuth, async (req: any, res) => {
+router.get("/", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const meUser = await clerkClient.users.getUser(req.clerkUserId);
-    const myRole = (meUser.publicMetadata?.role as string) || "employee";
-    if (myRole !== "boss") {
+    if (req.userRole !== "boss") {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const myCompanyId = (meUser.publicMetadata?.companyId as number) ?? null;
     const { data: users } = await clerkClient.users.getUserList({ limit: 500 });
-    const companyUsers = myCompanyId
-      ? users.filter((u) => (u.publicMetadata?.companyId as number) === myCompanyId)
-      : [];
+    const companyUsers = users.filter(
+      (u) => (u.publicMetadata?.companyId as number) === req.companyId
+    );
     res.json(companyUsers.map(formatUser));
   } catch (err) {
     req.log.error({ err }, "Failed to list users");

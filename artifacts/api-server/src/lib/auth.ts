@@ -43,17 +43,58 @@ export function resolveUsername(user: any): string | null {
   );
 }
 
+/* ── In-memory username cache (5-minute TTL) ─────────────────────────── */
+
+type CacheEntry = { username: string | null; expiresAt: number };
+const usernameCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getCachedUsername(id: string): string | null | undefined {
+  const entry = usernameCache.get(id);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    usernameCache.delete(id);
+    return undefined;
+  }
+  return entry.username;
+}
+
+function setCachedUsername(id: string, username: string | null) {
+  usernameCache.set(id, { username, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
 export async function batchUsernames(clerkIds: string[]): Promise<Record<string, string | null>> {
   const unique = [...new Set(clerkIds.filter(Boolean))];
-  const results = await Promise.all(
-    unique.map(async (id) => {
-      try {
-        const u = await clerkClient.users.getUser(id);
-        return [id, resolveUsername(u)] as const;
-      } catch {
-        return [id, null] as const;
-      }
-    })
-  );
-  return Object.fromEntries(results);
+  const result: Record<string, string | null> = {};
+
+  const toFetch: string[] = [];
+  for (const id of unique) {
+    const cached = getCachedUsername(id);
+    if (cached !== undefined) {
+      result[id] = cached;
+    } else {
+      toFetch.push(id);
+    }
+  }
+
+  if (toFetch.length > 0) {
+    const fetched = await Promise.all(
+      toFetch.map(async (id) => {
+        try {
+          const u = await clerkClient.users.getUser(id);
+          const username = resolveUsername(u);
+          setCachedUsername(id, username);
+          return [id, username] as const;
+        } catch {
+          setCachedUsername(id, null);
+          return [id, null] as const;
+        }
+      })
+    );
+    for (const [id, username] of fetched) {
+      result[id] = username;
+    }
+  }
+
+  return result;
 }
