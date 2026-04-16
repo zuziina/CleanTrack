@@ -238,12 +238,12 @@ export default function HousesPage() {
                 className={cn(
                   "overflow-hidden transition-colors cursor-pointer group relative border-2 touch-manipulation",
                   house.status === "active"
-                    ? "border-green-400"
+                    ? "border-teal-300/70"
                     : "border-gray-200",
                   isManageMode
                     ? "ring-1 ring-amber-200/60 hover:border-amber-400"
                     : house.status === "active"
-                      ? "hover:border-green-500"
+                      ? "hover:border-teal-400/80"
                       : "hover:border-gray-400"
                 )}
                 onClick={() => handleCardClick(house.id)}
@@ -429,7 +429,7 @@ function HouseDetailModal({
                   <Badge className={cn(
                     "capitalize text-xs px-2.5 py-0.5",
                     house.status === "active"
-                      ? "bg-green-100 text-green-700 border border-green-200"
+                      ? "bg-teal-50 text-teal-700 border border-teal-200/80"
                       : "bg-secondary text-muted-foreground"
                   )}>
                     {house.status}
