@@ -176,6 +176,7 @@ function BossSchedule() {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [filterHouse, setFilterHouse] = useState<number | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [removeConfirmTarget, setRemoveConfirmTarget] = useState<any>(null);
 
@@ -239,15 +240,28 @@ function BossSchedule() {
   const selectedDateStr = toDateString(selectedDate);
   const selectedAssignments = assignmentsByDate[selectedDateStr] ?? [];
 
+  const housesInSelection = useMemo(() => {
+    const seen = new Set<number>();
+    const result: { id: number; name: string }[] = [];
+    for (const a of selectedAssignments) {
+      if (a.houseId && !seen.has(a.houseId)) {
+        seen.add(a.houseId);
+        result.push({ id: a.houseId, name: a.houseName ?? `House ${a.houseId}` });
+      }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedAssignments]);
+
   const filteredAssignments = useMemo(() => {
     return selectedAssignments.filter((a: any) => {
       if (filterEmployee && a.assignedToClerkId !== filterEmployee) return false;
       if (filterStatus && a.status !== filterStatus) return false;
+      if (filterHouse && a.houseId !== filterHouse) return false;
       return true;
     });
-  }, [selectedAssignments, filterEmployee, filterStatus]);
+  }, [selectedAssignments, filterEmployee, filterStatus, filterHouse]);
 
-  const hasActiveFilter = filterEmployee !== null || filterStatus !== null;
+  const hasActiveFilter = filterEmployee !== null || filterStatus !== null || filterHouse !== null;
 
   const formattedSelected = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
@@ -481,7 +495,7 @@ function BossSchedule() {
             </div>
             {hasActiveFilter && (
               <button
-                onClick={() => { setFilterEmployee(null); setFilterStatus(null); }}
+                onClick={() => { setFilterEmployee(null); setFilterStatus(null); setFilterHouse(null); }}
                 className="text-xs text-muted-foreground hover:text-destructive transition-colors underline-offset-2 hover:underline shrink-0 mt-0.5"
               >
                 Clear filters
@@ -492,6 +506,7 @@ function BossSchedule() {
           {/* Filter pills */}
           {selectedAssignments.length > 0 && (
             <div className="space-y-2">
+              {/* Person filter */}
               {employees.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14 shrink-0">
@@ -503,8 +518,8 @@ function BossSchedule() {
                       className={cn(
                         "h-6 px-2.5 rounded-full text-xs font-medium border transition-all",
                         filterEmployee === null
-                          ? "bg-foreground text-background border-foreground"
-                          : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
+                          ? "bg-primary/15 text-primary border-primary/40 font-semibold"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
                       )}
                     >
                       All
@@ -531,6 +546,7 @@ function BossSchedule() {
                 </div>
               )}
 
+              {/* Status filter */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14 shrink-0">
                   Status
@@ -541,7 +557,7 @@ function BossSchedule() {
                     className={cn(
                       "h-6 px-2.5 rounded-full text-xs font-medium border transition-all",
                       filterStatus === null
-                        ? "bg-foreground text-background border-foreground"
+                        ? "bg-primary/15 text-primary border-primary/40 font-semibold"
                         : "bg-background text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
                     )}
                   >
@@ -566,6 +582,46 @@ function BossSchedule() {
                   })}
                 </div>
               </div>
+
+              {/* House filter */}
+              {housesInSelection.length > 1 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14 shrink-0">
+                    House
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => setFilterHouse(null)}
+                      className={cn(
+                        "h-6 px-2.5 rounded-full text-xs font-medium border transition-all",
+                        filterHouse === null
+                          ? "bg-primary/15 text-primary border-primary/40 font-semibold"
+                          : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                      )}
+                    >
+                      All
+                    </button>
+                    {housesInSelection.map((h) => {
+                      const isActive = filterHouse === h.id;
+                      return (
+                        <button
+                          key={h.id}
+                          onClick={() => setFilterHouse(isActive ? null : h.id)}
+                          className={cn(
+                            "h-6 px-2.5 rounded-full text-xs font-medium border transition-all max-w-[140px] truncate",
+                            isActive
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                          )}
+                          title={h.name}
+                        >
+                          {h.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -588,7 +644,7 @@ function BossSchedule() {
             <Card className="border-dashed border-2 bg-background/50">
               <CardContent className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                 <p className="font-medium text-foreground">No matches</p>
-                <button onClick={() => { setFilterEmployee(null); setFilterStatus(null); }} className="text-sm underline hover:text-foreground transition-colors mt-1">
+                <button onClick={() => { setFilterEmployee(null); setFilterStatus(null); setFilterHouse(null); }} className="text-sm underline hover:text-foreground transition-colors mt-1">
                   Clear filters
                 </button>
               </CardContent>
