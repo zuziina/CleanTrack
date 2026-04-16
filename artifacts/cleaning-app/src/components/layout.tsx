@@ -26,7 +26,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-    <div className="flex h-screen bg-background overflow-hidden">
+    {/*
+      Use `fixed inset-0` instead of `h-screen` to anchor the container to
+      the physical screen corners. `100vh` on mobile Safari is measured
+      *including* the browser toolbar, so it reflows (and the toolbar
+      shows/hides) every time the toolbar animates. `fixed inset-0` bypasses
+      that measurement entirely.
+    */}
+    <div className="fixed inset-0 flex bg-background overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-60 border-r border-border bg-card shrink-0">
         <div className="px-5 py-5 flex items-center gap-3 border-b border-border/50">
@@ -75,7 +82,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Button>
         </header>
 
+        {/*
+          `key={location}` destroys and recreates this element on every tab
+          switch. This resets scrollTop to 0 instantly, preventing the brief
+          scroll event that tells Safari to show its address bar.
+        */}
         <div
+          key={location}
           className="flex-1 overflow-y-auto overscroll-contain touch-pan-y pb-16 md:pb-0"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
@@ -83,8 +96,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile Tab Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm flex justify-around px-2 py-1.5 pb-safe z-50">
+      {/* Mobile Tab Bar — pb-[env(safe-area-inset-bottom)] accounts for iPhone home indicator */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm flex justify-around px-2 py-1.5 z-50"
+           style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}>
         {navItems.map((item) => (
           <Link key={item.href} href={item.href} className={cn(
             "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-lg min-w-[4rem] transition-colors",

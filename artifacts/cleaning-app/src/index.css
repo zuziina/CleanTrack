@@ -66,6 +66,23 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Prevent body/html from ever scrolling — the fixed layout container handles
+   all scrolling internally. Without this, momentum scroll on body can reach
+   the browser's chrome and trigger Safari's address-bar show/hide. */
+html, body {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  /* Fallback for older Safari: stretch to cover notch area */
+  height: -webkit-fill-available;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);
