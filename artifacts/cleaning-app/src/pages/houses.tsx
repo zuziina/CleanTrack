@@ -387,7 +387,7 @@ function HouseDetailModal({
 
   return (
     <Dialog open={!!houseId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] p-0 bg-[#fafaf9] flex flex-col max-h-[92dvh] gap-0">
+      <DialogContent hideClose className="sm:max-w-[600px] p-0 bg-[#fafaf9] flex flex-col max-h-[92dvh] gap-0">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-2/3" />
