@@ -11,6 +11,26 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Daily Database Backup"
+
+[[workflows.workflow]]
+name = "Daily Database Backup"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node artifacts/api-server/backup-daemon.mjs"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -45,3 +65,10 @@ externalPort = 3003
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+R2_BUCKET_NAME = "cleantrack-backup"
+R2_ENDPOINT = "https://3095c88c464c44c50917bc0247dcc020.r2.cloudflarestorage.com"
+R2_ACCOUNT_ID = "3095c88c464c44c50917bc0247dcc020"
