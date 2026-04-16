@@ -26,6 +26,8 @@ import {
   Loader2,
   Users,
   Trash2,
+  Pencil,
+  AlarmClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -253,7 +255,7 @@ function EmployeeAttendance() {
 
   return (
     <div className="space-y-6">
-      <TodayClockWidget session={effectiveTodaySession} isLoading={todayState.isLoading} busy={todayState.busy} clockIn={todayState.clockIn} clockOut={todayState.clockOut} undoClock={todayState.undoClock} />
+      <TodayClockWidget session={effectiveTodaySession} isLoading={todayState.isLoading} busy={todayState.busy} clockIn={todayState.clockIn} clockOut={todayState.clockOut} undoClock={todayState.undoClock} todayStr={todayStr} reload={() => { todayState.reload(); refetch(); }} />
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -393,6 +395,8 @@ function TodayClockWidget({
   clockIn,
   clockOut,
   undoClock,
+  todayStr,
+  reload,
 }: {
   session: WorkSession | null | undefined;
   isLoading: boolean;
@@ -400,48 +404,148 @@ function TodayClockWidget({
   clockIn: () => void;
   clockOut: () => void;
   undoClock: () => void;
+  todayStr: string;
+  reload: () => void;
 }) {
   const elapsed = useLiveElapsed(session?.clockedInAt ?? null, session?.clockedOutAt ?? null);
+  const [patchBusy, setPatchBusy] = useState(false);
+
+  const [showManual, setShowManual] = useState(false);
+  const [manualIn, setManualIn] = useState("");
+
+  const [editingIn, setEditingIn] = useState(false);
+  const [tempIn, setTempIn] = useState("");
+
+  const [editingField, setEditingField] = useState<"in" | "out" | null>(null);
+  const [tempTime, setTempTime] = useState("");
+
+  const patchToday = async (inAt: string | null, outAt: string | null) => {
+    setPatchBusy(true);
+    try {
+      const r = await fetch(`/api/work-sessions/date/${todayStr}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ clockedInAt: inAt, clockedOutAt: outAt }),
+      });
+      if (r.ok) { reload(); toast.success("Time updated"); }
+      else toast.error("Could not update time");
+    } catch { toast.error("Could not update time"); }
+    finally { setPatchBusy(false); }
+  };
 
   if (isLoading || session === undefined) {
-    return <Skeleton className="h-28 w-full rounded-2xl" />;
+    return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
 
   const notStarted = !session?.clockedInAt;
   const inProgress = !!session?.clockedInAt && !session?.clockedOutAt;
-  const done = !!session?.clockedInAt && !!session?.clockedOutAt;
 
+  /* ── Not started ── */
   if (notStarted) {
+    const handleManualClockIn = async () => {
+      if (!manualIn) { toast.error("Pick a time first"); return; }
+      await patchToday(localTimeToISO(manualIn, todayStr), null);
+      setShowManual(false);
+      setManualIn("");
+    };
+
     return (
-      <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <p className="font-semibold text-foreground">Ready to start your workday?</p>
-          <p className="text-sm text-muted-foreground">Tap to record when you arrived</p>
+      <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-foreground">Ready to start your workday?</p>
+            <p className="text-sm text-muted-foreground">Tap Clock In to record when you arrived</p>
+          </div>
+          <Button
+            size="lg"
+            className="h-12 px-8 font-semibold gap-2 shadow-md shrink-0"
+            onClick={clockIn}
+            disabled={busy || patchBusy}
+          >
+            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
+            Clock In
+          </Button>
         </div>
-        <Button
-          size="lg"
-          className="h-12 px-8 font-semibold gap-2 shadow-md shrink-0"
-          onClick={clockIn}
-          disabled={busy}
-        >
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-          Clock In
-        </Button>
+
+        {!showManual ? (
+          <button
+            onClick={() => { setShowManual(true); setManualIn(""); }}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <AlarmClock className="h-3.5 w-3.5" />
+            Forgot to clock in earlier? Enter a different start time
+          </button>
+        ) : (
+          <div className="bg-white rounded-xl border border-border p-3 flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[140px] space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase font-semibold tracking-wider flex items-center gap-1">
+                <LogIn className="h-3 w-3 text-emerald-600" /> Started at
+              </Label>
+              <Input
+                type="time"
+                value={manualIn}
+                onChange={(e) => setManualIn(e.target.value)}
+                className="h-10"
+                autoFocus
+              />
+            </div>
+            <Button size="sm" className="h-10 px-5" onClick={handleManualClockIn} disabled={patchBusy || !manualIn}>
+              {patchBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-10" onClick={() => setShowManual(false)}>
+              Cancel
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
 
+  /* ── In progress ── */
   if (inProgress) {
+    const saveInEdit = async () => {
+      if (!tempIn) { toast.error("Pick a time"); return; }
+      const outISO = session.clockedOutAt ?? null;
+      await patchToday(localTimeToISO(tempIn, todayStr), outISO);
+      setEditingIn(false);
+    };
+
     return (
-      <div className="rounded-2xl bg-primary text-primary-foreground p-5 shadow-md">
+      <div className="rounded-2xl bg-primary text-primary-foreground p-5 shadow-md space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="bg-white/15 rounded-xl p-2.5">
+            <div className="bg-white/15 rounded-xl p-2.5 shrink-0">
               <Timer className="h-5 w-5 animate-pulse" />
             </div>
             <div>
-              <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-wider">Clocked in</p>
-              <p className="text-lg font-bold">{formatTime(session.clockedInAt!)}</p>
+              <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-wider mb-0.5">Clocked in</p>
+              {editingIn ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={tempIn}
+                    onChange={(e) => setTempIn(e.target.value)}
+                    className="h-8 rounded-md px-2 text-sm bg-white/15 border border-white/30 text-white focus:outline-none focus:ring-1 focus:ring-white/50 w-28"
+                    autoFocus
+                  />
+                  <button onClick={saveInEdit} disabled={patchBusy} className="text-xs font-bold text-white/90 hover:text-white disabled:opacity-50">
+                    {patchBusy ? "…" : "Save"}
+                  </button>
+                  <button onClick={() => setEditingIn(false)} className="text-xs text-white/50 hover:text-white/80">✕</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <p className="text-lg font-bold">{formatTime(session.clockedInAt!)}</p>
+                  <button
+                    onClick={() => { setTempIn(toTimeInput(session.clockedInAt)); setEditingIn(true); }}
+                    className="opacity-50 hover:opacity-90 transition-opacity"
+                    title="Edit start time"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <div className="text-right">
@@ -449,7 +553,8 @@ function TodayClockWidget({
             <p className="text-2xl font-bold font-mono tabular-nums">{formatDuration(elapsed)}</p>
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-3">
+
+        <div className="flex items-center gap-3">
           <Button
             variant="secondary"
             size="lg"
@@ -465,45 +570,117 @@ function TodayClockWidget({
             disabled={busy}
             className="text-xs text-primary-foreground/50 hover:text-primary-foreground/80 transition-colors whitespace-nowrap"
           >
-            Undo
+            Delete entry
           </button>
         </div>
       </div>
     );
   }
 
+  /* ── Done ── */
   const total = sessionDuration(session) ?? 0;
+
+  const startEditField = (field: "in" | "out") => {
+    setEditingField(field);
+    setTempTime(field === "in" ? toTimeInput(session.clockedInAt) : toTimeInput(session.clockedOutAt));
+  };
+
+  const saveField = async () => {
+    if (!tempTime) { toast.error("Pick a time"); return; }
+    const curIn = toTimeInput(session.clockedInAt);
+    const curOut = toTimeInput(session.clockedOutAt);
+    const newIn = editingField === "in" ? tempTime : curIn;
+    const newOut = editingField === "out" ? tempTime : curOut;
+    if (newOut && newIn && newOut <= newIn) { toast.error("Clock-out must be after clock-in"); return; }
+    await patchToday(localTimeToISO(newIn, todayStr), newOut ? localTimeToISO(newOut, todayStr) : null);
+    setEditingField(null);
+  };
 
   return (
     <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-5">
       <div className="flex items-center gap-3 mb-4">
-        <div className="bg-emerald-100 rounded-xl p-2.5">
+        <div className="bg-emerald-100 rounded-xl p-2.5 shrink-0">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
         </div>
         <div>
           <p className="font-semibold text-emerald-800">Workday complete</p>
-          <p className="text-xs text-emerald-600">You're done for today — great work!</p>
+          <p className="text-xs text-emerald-600">Great work today! Tap the pencil to correct any times.</p>
         </div>
       </div>
+
       <div className="grid grid-cols-3 gap-3 text-center">
-        <div className="bg-white/80 rounded-xl p-3 border border-emerald-100">
+        {/* Arrived */}
+        <div className="bg-white/80 rounded-xl p-3 border border-emerald-100 min-h-[72px] flex flex-col items-center justify-center">
           <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1">Arrived</p>
-          <p className="font-bold text-sm">{formatTime(session.clockedInAt!)}</p>
+          {editingField === "in" ? (
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <input
+                type="time"
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                className="w-full h-8 rounded border border-border px-2 text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button onClick={saveField} disabled={patchBusy} className="text-[10px] font-bold text-primary hover:underline disabled:opacity-50">
+                  {patchBusy ? "…" : "Save"}
+                </button>
+                <span className="text-muted-foreground text-[10px]">·</span>
+                <button onClick={() => setEditingField(null)} className="text-[10px] text-muted-foreground hover:underline">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <span className="font-bold text-sm">{formatTime(session.clockedInAt!)}</span>
+              <button onClick={() => startEditField("in")} className="text-muted-foreground hover:text-foreground transition-colors" title="Edit arrived time">
+                <Pencil className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
-        <div className="bg-emerald-100 rounded-xl p-3 border border-emerald-200">
+
+        {/* Total */}
+        <div className="bg-emerald-100 rounded-xl p-3 border border-emerald-200 flex flex-col items-center justify-center">
           <p className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wider mb-1">Total</p>
           <p className="font-bold text-sm text-emerald-800">{formatDuration(total)}</p>
         </div>
-        <div className="bg-white/80 rounded-xl p-3 border border-emerald-100">
+
+        {/* Left */}
+        <div className="bg-white/80 rounded-xl p-3 border border-emerald-100 min-h-[72px] flex flex-col items-center justify-center">
           <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-1">Left</p>
-          <p className="font-bold text-sm">{formatTime(session.clockedOutAt!)}</p>
+          {editingField === "out" ? (
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <input
+                type="time"
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                className="w-full h-8 rounded border border-border px-2 text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button onClick={saveField} disabled={patchBusy} className="text-[10px] font-bold text-primary hover:underline disabled:opacity-50">
+                  {patchBusy ? "…" : "Save"}
+                </button>
+                <span className="text-muted-foreground text-[10px]">·</span>
+                <button onClick={() => setEditingField(null)} className="text-[10px] text-muted-foreground hover:underline">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <span className="font-bold text-sm">{formatTime(session.clockedOutAt!)}</span>
+              <button onClick={() => startEditField("out")} className="text-muted-foreground hover:text-foreground transition-colors" title="Edit left time">
+                <Pencil className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
       <button
         onClick={undoClock}
         className="mt-3 text-xs text-muted-foreground hover:text-destructive transition-colors w-full text-center"
       >
-        Undo clock-out
+        Delete today's entry
       </button>
     </div>
   );
