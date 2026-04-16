@@ -41,6 +41,7 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
+  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -386,7 +387,7 @@ function HouseDetailModal({
 
   return (
     <Dialog open={!!houseId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-[#fafaf9]">
+      <DialogContent className="sm:max-w-[600px] p-0 bg-[#fafaf9] flex flex-col max-h-[92dvh] gap-0">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
             <Skeleton className="h-8 w-2/3" />
@@ -395,88 +396,97 @@ function HouseDetailModal({
           </div>
         ) : (
           <>
-            <div className="bg-primary/5 p-6 border-b border-border">
+            {/* Sticky header */}
+            <div className="bg-primary/5 px-5 pt-5 pb-4 border-b border-border shrink-0">
               <DialogHeader>
-                <div className="flex justify-between items-start gap-4">
+                <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <DialogTitle className="text-2xl font-bold text-foreground mb-1">
+                    <DialogTitle className="text-xl font-bold text-foreground leading-tight">
                       {house.name}
                     </DialogTitle>
-                    <DialogDescription className="text-foreground/60">
+                    <DialogDescription className="text-foreground/60 mt-0.5">
                       {house.ownerName}
                     </DialogDescription>
                   </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <Badge className="capitalize text-sm px-3 py-1 bg-primary text-primary-foreground">
-                      {house.status}
-                    </Badge>
-                    {house.mapLink && (
-                      <button
-                        type="button"
-                        onClick={() => window.open(house.mapLink!, "_blank")}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors whitespace-nowrap"
-                      >
-                        <MapPin className="h-3 w-3" />
-                        Open in Maps
-                      </button>
-                    )}
-                  </div>
+                  {/* Explicit close button — always visible, large tap target */}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="shrink-0 rounded-full w-9 h-9 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {/* Status + map link row */}
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <Badge className={cn(
+                    "capitalize text-xs px-2.5 py-0.5",
+                    house.status === "active"
+                      ? "bg-green-100 text-green-700 border border-green-200"
+                      : "bg-secondary text-muted-foreground"
+                  )}>
+                    {house.status}
+                  </Badge>
+                  {house.mapLink && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(house.mapLink!, "_blank")}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      Open in Maps
+                      <ExternalLink className="h-3 w-3 ml-0.5" />
+                    </button>
+                  )}
                 </div>
               </DialogHeader>
             </div>
 
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-5">
                 <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Owner Details
                   </h4>
-                  <div className="bg-secondary/30 rounded-lg p-3 space-y-2 border border-border/50">
+                  <div className="bg-secondary/30 rounded-lg p-3 space-y-1.5 border border-border/50">
                     <p className="font-medium text-foreground">{house.ownerName}</p>
                     {house.ownerPhone && (
-                      <p className="text-sm text-muted-foreground">{house.ownerPhone}</p>
+                      <a href={`tel:${house.ownerPhone}`} className="block text-sm text-primary hover:underline">
+                        {house.ownerPhone}
+                      </a>
                     )}
                     {house.ownerEmail && (
-                      <p className="text-sm text-muted-foreground">{house.ownerEmail}</p>
+                      <a href={`mailto:${house.ownerEmail}`} className="block text-sm text-primary hover:underline">
+                        {house.ownerEmail}
+                      </a>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Property Specs
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <span className="text-lg font-bold leading-none">{house.singleBeds ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Single</span>
-                    </div>
-                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <span className="text-lg font-bold leading-none">{house.doubleBeds ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Double</span>
-                    </div>
-                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <span className="text-lg font-bold leading-none">{house.babyBeds ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Baby</span>
-                    </div>
-                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <Bath className="h-5 w-5 mb-1 text-muted-foreground" />
-                      <span className="text-lg font-bold leading-none">{house.bathrooms ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Baths</span>
-                    </div>
-                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <Waves className="h-5 w-5 mb-1 text-muted-foreground" />
-                      <span className="text-lg font-bold leading-none">{house.jacuzzis ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Jacuzzis</span>
-                    </div>
-                    <div className="bg-card border border-border/50 rounded-lg p-3 flex flex-col items-center justify-center text-center">
-                      <Flame className="h-5 w-5 mb-1 text-muted-foreground" />
-                      <span className="text-lg font-bold leading-none">{house.saunas ?? "-"}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase mt-1">Saunas</span>
-                    </div>
+                    {[
+                      { label: "Single", value: house.singleBeds },
+                      { label: "Double", value: house.doubleBeds },
+                      { label: "Baby", value: house.babyBeds },
+                      { label: "Baths", value: house.bathrooms, icon: <Bath className="h-4 w-4 mb-0.5 text-muted-foreground" /> },
+                      { label: "Jacuzzis", value: house.jacuzzis, icon: <Waves className="h-4 w-4 mb-0.5 text-muted-foreground" /> },
+                      { label: "Saunas", value: house.saunas, icon: <Flame className="h-4 w-4 mb-0.5 text-muted-foreground" /> },
+                    ].map(({ label, value, icon }) => (
+                      <div key={label} className="bg-card border border-border/50 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                        {icon}
+                        <span className="text-base font-bold leading-none">{value ?? "-"}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase mt-1">{label}</span>
+                      </div>
+                    ))}
                     {house.entryCode && (
                       <div className="col-span-3 bg-card border border-border/50 rounded-lg p-3 flex items-center justify-between">
-                        <span className="text-sm font-medium">Entry Code</span>
+                        <span className="text-sm font-medium text-muted-foreground">Entry Code</span>
                         <span className="font-mono font-semibold tracking-widest text-primary">
                           {house.entryCode}
                         </span>
@@ -486,28 +496,31 @@ function HouseDetailModal({
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="flex flex-col h-full">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    Notes
-                  </h4>
-                  <div className="flex-1 flex flex-col gap-3">
-                    <Textarea
-                      value={notesValue}
-                      onChange={(e) => setNotesValue(e.target.value)}
-                      placeholder="Add access codes, special instructions, or cleaning preferences..."
-                      className="flex-1 min-h-[160px] resize-none bg-amber-50/50 border-amber-200/50 focus-visible:ring-amber-500/30"
-                    />
-                    <Button
-                      onClick={handleSaveNotes}
-                      disabled={updateNotes.isPending || notesValue === (house.notes || "")}
-                      className="w-full"
-                    >
-                      {updateNotes.isPending ? "Saving..." : "Save Notes"}
-                    </Button>
-                  </div>
-                </div>
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Notes
+                </h4>
+                <Textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder="Access codes, special instructions, cleaning preferences..."
+                  className="min-h-[140px] resize-none bg-amber-50/50 border-amber-200/50 focus-visible:ring-amber-500/30"
+                />
+                <Button
+                  onClick={handleSaveNotes}
+                  disabled={updateNotes.isPending || notesValue === (house.notes || "")}
+                  className="w-full"
+                >
+                  {updateNotes.isPending ? "Saving..." : "Save Notes"}
+                </Button>
               </div>
+            </div>
+
+            {/* Bottom close button for mobile — easy thumb tap */}
+            <div className="shrink-0 px-5 pb-5 pt-3 border-t border-border md:hidden">
+              <Button variant="outline" className="w-full" onClick={onClose}>
+                Close
+              </Button>
             </div>
           </>
         )}
