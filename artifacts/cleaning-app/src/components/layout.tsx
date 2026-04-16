@@ -75,7 +75,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Button>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain touch-pan-y"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {children}
         </div>
       </main>

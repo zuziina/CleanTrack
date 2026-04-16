@@ -234,7 +234,7 @@ export default function HousesPage() {
               <Card
                 key={house.id}
                 className={cn(
-                  "overflow-hidden transition-colors cursor-pointer group relative border-2",
+                  "overflow-hidden transition-colors cursor-pointer group relative border-2 touch-manipulation",
                   house.status === "active"
                     ? "border-green-400"
                     : "border-gray-200",
