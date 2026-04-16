@@ -23,6 +23,7 @@ import type {
   CreateAssignmentBody,
   CreateCompanyBody,
   CreateHouseBody,
+  FinishCleaningBody,
   HealthStatus,
   House,
   HouseStats,
@@ -1349,11 +1350,14 @@ export const getFinishCleaningUrl = (id: number) => {
 
 export const finishCleaning = async (
   id: number,
+  finishCleaningBody?: FinishCleaningBody,
   options?: RequestInit,
 ): Promise<Assignment> => {
   return customFetch<Assignment>(getFinishCleaningUrl(id), {
     ...options,
     method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(finishCleaningBody),
   });
 };
 
@@ -1364,14 +1368,14 @@ export const getFinishCleaningMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof finishCleaning>>,
     TError,
-    { id: number },
+    { id: number; data: BodyType<FinishCleaningBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof finishCleaning>>,
   TError,
-  { id: number },
+  { id: number; data: BodyType<FinishCleaningBody> },
   TContext
 > => {
   const mutationKey = ["finishCleaning"];
@@ -1385,11 +1389,11 @@ export const getFinishCleaningMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof finishCleaning>>,
-    { id: number }
+    { id: number; data: BodyType<FinishCleaningBody> }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, data } = props ?? {};
 
-    return finishCleaning(id, requestOptions);
+    return finishCleaning(id, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1398,7 +1402,7 @@ export const getFinishCleaningMutationOptions = <
 export type FinishCleaningMutationResult = NonNullable<
   Awaited<ReturnType<typeof finishCleaning>>
 >;
-
+export type FinishCleaningMutationBody = BodyType<FinishCleaningBody>;
 export type FinishCleaningMutationError = ErrorType<unknown>;
 
 /**
@@ -1411,14 +1415,14 @@ export const useFinishCleaning = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof finishCleaning>>,
     TError,
-    { id: number },
+    { id: number; data: BodyType<FinishCleaningBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof finishCleaning>>,
   TError,
-  { id: number },
+  { id: number; data: BodyType<FinishCleaningBody> },
   TContext
 > => {
   return useMutation(getFinishCleaningMutationOptions(options));

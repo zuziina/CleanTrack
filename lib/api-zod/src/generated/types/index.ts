@@ -18,6 +18,7 @@ export * from "./createAssignmentBodyStatus";
 export * from "./createCompanyBody";
 export * from "./createHouseBody";
 export * from "./createHouseBodyStatus";
+export * from "./finishCleaningBody";
 export * from "./healthStatus";
 export * from "./house";
 export * from "./houseStats";

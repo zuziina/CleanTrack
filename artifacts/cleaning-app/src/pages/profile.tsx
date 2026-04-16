@@ -23,6 +23,9 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  Timer,
+  AlertCircle,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
@@ -114,9 +117,10 @@ function BossOverview() {
   const [copied, setCopied] = useState(false);
 
   const today = toDateString(new Date());
+  const formattedToday = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const employees = useMemo(
-    () => (users ?? []).filter((u: any) => u.role === "employee"),
+    () => (users ?? []).filter((u: any) => u.role === "employee" && !u.isHidden),
     [users]
   );
 
@@ -126,7 +130,24 @@ function BossOverview() {
   );
 
   const completedToday = todayAssignments.filter((a: any) => a.status === "completed").length;
-  const pendingToday = todayAssignments.filter((a: any) => a.status !== "completed").length;
+  const inProgressToday = todayAssignments.filter((a: any) => a.status === "in_progress").length;
+  const pendingToday = todayAssignments.filter((a: any) => a.status === "pending").length;
+  const totalToday = todayAssignments.length;
+
+  const employeeSummaries = useMemo(() => {
+    return employees.map((emp: any) => {
+      const empJobs = todayAssignments.filter((a: any) => a.assignedToClerkId === emp.clerkId);
+      const done = empJobs.filter((a: any) => a.status === "completed").length;
+      const inProg = empJobs.filter((a: any) => a.status === "in_progress").length;
+      const pend = empJobs.filter((a: any) => a.status === "pending").length;
+      return { ...emp, total: empJobs.length, done, inProg, pend };
+    }).filter((e: any) => e.total > 0);
+  }, [employees, todayAssignments]);
+
+  const unassignedJobs = useMemo(
+    () => todayAssignments.filter((a: any) => !a.assignedToClerkId),
+    [todayAssignments]
+  );
 
   const handleCopy = () => {
     if (!company?.inviteCode) return;
@@ -174,27 +195,169 @@ function BossOverview() {
         </Card>
       ) : null}
 
+      {/* Today's Summary */}
+      <Card className="border bg-[#fafaf9] shadow-sm overflow-hidden">
+        <div className="px-5 pt-4 pb-3 border-b border-border/50">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-amber-500/10 p-2 rounded-lg shrink-0">
+                <TrendingUp className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground text-sm">Today's Summary</p>
+                <p className="text-xs text-muted-foreground">{formattedToday}</p>
+              </div>
+            </div>
+            {totalToday > 0 && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-xs font-semibold px-2.5",
+                  completedToday === totalToday
+                    ? "text-green-700 border-green-300 bg-green-50"
+                    : "text-amber-700 border-amber-300 bg-amber-50"
+                )}
+              >
+                {completedToday}/{totalToday} done
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <CardContent className="p-5 space-y-4">
+          {totalToday === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-2">No jobs scheduled for today</p>
+          ) : (
+            <>
+              {/* Progress bar */}
+              <div className="space-y-1.5">
+                <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary gap-0.5">
+                  {completedToday > 0 && (
+                    <div
+                      className="bg-green-500 rounded-full transition-all"
+                      style={{ width: `${(completedToday / totalToday) * 100}%` }}
+                    />
+                  )}
+                  {inProgressToday > 0 && (
+                    <div
+                      className="bg-amber-400 rounded-full transition-all"
+                      style={{ width: `${(inProgressToday / totalToday) * 100}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  {completedToday > 0 && (
+                    <span className="flex items-center gap-1 text-green-700 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                      {completedToday} completed
+                    </span>
+                  )}
+                  {inProgressToday > 0 && (
+                    <span className="flex items-center gap-1 text-amber-700 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                      {inProgressToday} in progress
+                    </span>
+                  )}
+                  {pendingToday > 0 && (
+                    <span className="flex items-center gap-1 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-secondary border border-border inline-block" />
+                      {pendingToday} pending
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Per-employee rows */}
+              {employeeSummaries.length > 0 && (
+                <div className="space-y-2">
+                  {employeeSummaries.map((emp: any) => {
+                    const name = emp.username || emp.firstName || "Unknown";
+                    const allDone = emp.done === emp.total;
+                    const hasActive = emp.inProg > 0;
+                    return (
+                      <div
+                        key={emp.clerkId}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm",
+                          allDone
+                            ? "bg-green-50 border-green-200"
+                            : hasActive
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-card border-border/50"
+                        )}
+                      >
+                        <Avatar className="h-7 w-7 shrink-0">
+                          <AvatarFallback className={cn(
+                            "text-[11px] font-bold",
+                            allDone ? "bg-green-200 text-green-800" : hasActive ? "bg-amber-200 text-amber-800" : "bg-primary/10 text-primary"
+                          )}>
+                            {name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium flex-1 truncate">{name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {allDone ? (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-green-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              All done
+                            </span>
+                          ) : hasActive ? (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
+                              <Timer className="h-3.5 w-3.5 animate-pulse" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5" />
+                              Not started
+                            </span>
+                          )}
+                          <span className="text-[11px] text-muted-foreground ml-1">
+                            {emp.done}/{emp.total}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Unassigned jobs warning */}
+              {unassignedJobs.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <p className="text-xs text-amber-800 font-medium">
+                    {unassignedJobs.length} job{unassignedJobs.length !== 1 ? "s" : ""} still unassigned today
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-4 text-center">
-            <Users className="h-5 w-5 text-primary mx-auto mb-1.5" />
-            <div className="text-2xl font-bold">{employees.length}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Employees</div>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="bg-primary/10 p-2 rounded-lg shrink-0">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <div className="text-xl font-bold leading-none">{employees.length}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Active Employees</div>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <ClipboardList className="h-5 w-5 text-amber-500 mx-auto mb-1.5" />
-            <div className="text-2xl font-bold">{pendingToday}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Jobs Today</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto mb-1.5" />
-            <div className="text-2xl font-bold">{completedToday}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Completed</div>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="bg-amber-500/10 p-2 rounded-lg shrink-0">
+              <ClipboardList className="h-4 w-4 text-amber-600" />
+            </div>
+            <div>
+              <div className="text-xl font-bold leading-none">{totalToday}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Jobs Scheduled Today</div>
+            </div>
           </CardContent>
         </Card>
       </div>

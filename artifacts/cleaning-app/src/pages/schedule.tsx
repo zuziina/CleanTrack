@@ -1143,6 +1143,12 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
               <Label>Notes (optional)</Label>
               <Textarea placeholder="Any specific instructions..." value={notes} onChange={(e) => setNotes(e.target.value)} className="resize-none" />
             </div>
+            {assignment.completionNotes && (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Completion Notes from Employee</p>
+                <p className="text-sm text-foreground/80">{assignment.completionNotes}</p>
+              </div>
+            )}
             <div className="flex justify-between gap-3 pt-2">
               <Button type="button" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setShowDeleteConfirm(true)} disabled={isBusy}>
                 <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -1217,6 +1223,8 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
   const [notesValue, setNotesValue] = useState("");
   const [editingField, setEditingField] = useState<"startedAt" | "finishedAt" | null>(null);
   const [editTimeValue, setEditTimeValue] = useState("");
+  const [showFinishNotes, setShowFinishNotes] = useState(false);
+  const [completionNotesInput, setCompletionNotesInput] = useState("");
 
   const elapsed = useLiveElapsed(assignment.startedAt ?? null, assignment.finishedAt ?? null);
 
@@ -1231,9 +1239,15 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
     });
   };
 
-  const handleFinish = () => {
-    finishCleaning.mutate({ id: assignment.id }, {
-      onSuccess: (data) => { setAssignment(data); qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() }); qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() }); },
+  const handleFinish = (notes: string) => {
+    finishCleaning.mutate({ id: assignment.id, data: { completionNotes: notes.trim() || null } }, {
+      onSuccess: (data) => {
+        setAssignment(data);
+        setShowFinishNotes(false);
+        setCompletionNotesInput("");
+        qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      },
       onError: () => toast.error("Failed to finish cleaning"),
     });
   };
@@ -1341,10 +1355,32 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                     )}
                   </div>
                   <div className="text-4xl font-bold font-mono tabular-nums text-amber-700">{formatDuration(elapsed)}</div>
-                  <Button size="lg" variant="outline" className="w-full max-w-xs h-14 text-base font-semibold gap-2 border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-sm" onClick={handleFinish} disabled={finishCleaning.isPending}>
-                    {finishCleaning.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                    Finish Cleaning
-                  </Button>
+                  {!showFinishNotes ? (
+                    <Button size="lg" variant="outline" className="w-full max-w-xs h-14 text-base font-semibold gap-2 border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-sm" onClick={() => setShowFinishNotes(true)} disabled={finishCleaning.isPending}>
+                      <CheckCircle2 className="h-5 w-5" />
+                      Finish Cleaning
+                    </Button>
+                  ) : (
+                    <div className="w-full max-w-sm space-y-3">
+                      <div className="text-sm font-medium text-amber-800 text-center">Any notes before finishing?</div>
+                      <Textarea
+                        placeholder="e.g. Found a broken towel rail, used extra supplies, dog was inside... (optional)"
+                        value={completionNotesInput}
+                        onChange={(e) => setCompletionNotesInput(e.target.value)}
+                        className="resize-none min-h-[90px] bg-white border-emerald-200 focus-visible:ring-emerald-400/50 text-sm"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => { setShowFinishNotes(false); setCompletionNotesInput(""); }} disabled={finishCleaning.isPending}>
+                          Cancel
+                        </Button>
+                        <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={() => handleFinish(completionNotesInput)} disabled={finishCleaning.isPending}>
+                          {finishCleaning.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          Confirm Finish
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <button onClick={() => applyTimingPatch({ startedAt: null, finishedAt: null })} disabled={patchTiming.isPending} className="text-xs text-muted-foreground hover:text-destructive transition-colors underline-offset-2 hover:underline disabled:opacity-50">Undo start</button>
                 </div>
               )}
@@ -1378,6 +1414,12 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                     <Timer className="h-3.5 w-3.5" /> Total: {formatDuration(elapsed)}
                   </div>
                   <button onClick={() => applyTimingPatch({ finishedAt: null })} disabled={patchTiming.isPending} className="text-xs text-muted-foreground hover:text-destructive transition-colors underline-offset-2 hover:underline disabled:opacity-50">Undo finish</button>
+                  {assignment.completionNotes && (
+                    <div className="w-full max-w-xs bg-white border border-emerald-200 rounded-lg px-3 py-2.5 text-left">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-1">Completion Notes</p>
+                      <p className="text-sm text-foreground/80">{assignment.completionNotes}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

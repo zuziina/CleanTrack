@@ -143,6 +143,7 @@ export const ListAssignmentsResponseItem = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem);
@@ -183,6 +184,7 @@ export const GetAssignmentResponse = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -219,6 +221,7 @@ export const UpdateAssignmentResponse = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -256,6 +259,7 @@ export const PatchAssignmentTimingResponse = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -281,6 +285,7 @@ export const StartCleaningResponse = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -289,6 +294,10 @@ export const StartCleaningResponse = zod.object({
  */
 export const FinishCleaningParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const FinishCleaningBody = zod.object({
+  completionNotes: zod.string().nullish(),
 });
 
 export const FinishCleaningResponse = zod.object({
@@ -306,6 +315,7 @@ export const FinishCleaningResponse = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -327,6 +337,7 @@ export const GetTodayAssignmentsResponseItem = zod.object({
   priority: zod.enum(["low", "normal", "high"]),
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const GetTodayAssignmentsResponse = zod.array(

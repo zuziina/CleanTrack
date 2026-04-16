@@ -319,6 +319,16 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                completionNotes:
+                  type: string
+                  nullable: true
       responses:
         "200":
           description: Updated assignment
@@ -593,6 +603,9 @@ components:
           type: string
           nullable: true
         finishedAt:
+          type: string
+          nullable: true
+        completionNotes:
           type: string
           nullable: true
         createdAt:

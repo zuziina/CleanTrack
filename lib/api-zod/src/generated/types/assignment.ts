@@ -23,5 +23,6 @@ export interface Assignment {
   priority: AssignmentPriority;
   startedAt?: string | null;
   finishedAt?: string | null;
+  completionNotes?: string | null;
   createdAt: string;
 }

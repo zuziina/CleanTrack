@@ -64,6 +64,7 @@ async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect;
     priority: r.assignments.priority,
     startedAt: r.assignments.startedAt?.toISOString() ?? null,
     finishedAt: r.assignments.finishedAt?.toISOString() ?? null,
+    completionNotes: r.assignments.completionNotes ?? null,
     createdAt: r.assignments.createdAt.toISOString(),
   };
 }
@@ -268,9 +269,10 @@ router.post("/:id/finish", requireAuthAndCompany, async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const completionNotes = typeof req.body?.completionNotes === "string" ? req.body.completionNotes.trim() || null : null;
     const [a] = await db
       .update(assignmentsTable)
-      .set({ finishedAt: new Date(), status: "completed" })
+      .set({ finishedAt: new Date(), status: "completed", completionNotes })
       .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)))
       .returning();
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
