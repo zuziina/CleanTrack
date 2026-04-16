@@ -1193,7 +1193,7 @@ function AssignModal({ user, defaultDate, onClose }: { user: any; defaultDate: s
               <Input type="number" min="0" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Priority</Label>
+              <Label>Maintenance</Label>
               <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
