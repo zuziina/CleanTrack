@@ -13,9 +13,12 @@ import {
   useStartCleaning,
   useFinishCleaning,
   usePatchAssignmentTiming,
+  usePatchUser,
+  useRemoveEmployee,
   getGetHouseQueryKey,
   getGetTodayAssignmentsQueryKey,
   getListAssignmentsQueryKey,
+  getListUsersQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +52,19 @@ import {
   AlarmClock,
   Waves,
   Flame,
+  MoreVertical,
+  EyeOff,
+  Eye,
+  UserMinus,
+  Plane,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo, useRef } from "react";
 import {
@@ -161,14 +176,54 @@ function BossSchedule() {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  const [removeConfirmTarget, setRemoveConfirmTarget] = useState<any>(null);
 
   const { data: users, isLoading: usersLoading } = useListUsers();
   const { data: allAssignments, isLoading: assignmentsLoading } = useListAssignments();
+  const patchUser = usePatchUser();
+  const removeEmployee = useRemoveEmployee();
+  const qc = useQueryClient();
 
-  const employees = useMemo(
+  const allEmployees = useMemo(
     () => (users ?? []).filter((u: any) => u.role === "employee"),
     [users]
   );
+  const employees = useMemo(
+    () => allEmployees.filter((u: any) => !u.isHidden),
+    [allEmployees]
+  );
+  const hiddenEmployees = useMemo(
+    () => allEmployees.filter((u: any) => u.isHidden),
+    [allEmployees]
+  );
+
+  const handleToggleHidden = (emp: any) => {
+    patchUser.mutate(
+      { clerkId: emp.clerkId, data: { isHidden: !emp.isHidden } },
+      {
+        onSuccess: () => {
+          toast.success(emp.isHidden ? `${emp.username || emp.firstName} is back` : `${emp.username || emp.firstName} set as away`);
+          qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+        },
+        onError: () => toast.error("Failed to update employee"),
+      }
+    );
+  };
+
+  const handleRemoveEmployee = (emp: any) => {
+    removeEmployee.mutate(
+      { clerkId: emp.clerkId },
+      {
+        onSuccess: () => {
+          toast.success(`${emp.username || emp.firstName} removed from company`);
+          qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+          setRemoveConfirmTarget(null);
+        },
+        onError: () => toast.error("Failed to remove employee"),
+      }
+    );
+  };
 
   const weekDays = useMemo(() => getWeekDays(weekRef), [weekRef]);
 
@@ -284,14 +339,14 @@ function BossSchedule() {
         <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
             <h3 className="text-sm font-semibold tracking-tight">Team</h3>
-            <Badge variant="outline" className="text-xs">{employees.length} employees</Badge>
+            <Badge variant="outline" className="text-xs">{employees.length} active</Badge>
           </div>
 
           {usersLoading ? (
             <div className="space-y-2">
               {[1, 2].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
             </div>
-          ) : employees.length === 0 ? (
+          ) : allEmployees.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-xl">
               No employees yet
             </div>
@@ -301,39 +356,113 @@ function BossSchedule() {
                 const empAssignments = selectedAssignments.filter(
                   (a: any) => a.assignedToClerkId === emp.clerkId
                 );
+                const name = emp.username || emp.firstName || "Unknown";
                 return (
                   <Card key={emp.clerkId} className="border-border/50">
                     <CardContent className="p-3 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="bg-primary/10 text-primary uppercase text-xs">
-                            {(emp.username || emp.firstName || "?").charAt(0)}
+                            {name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="font-medium leading-none truncate text-sm">
-                            {emp.username || emp.firstName}
-                          </p>
+                          <p className="font-medium leading-none truncate text-sm">{name}</p>
                           <p className={cn("text-xs mt-0.5", empAssignments.length > 0 ? "text-primary font-medium" : "text-muted-foreground")}>
                             {empAssignments.length > 0
-                              ? `${empAssignments.length} job${empAssignments.length !== 1 ? "s" : ""} this day`
+                              ? `${empAssignments.length} job${empAssignments.length !== 1 ? "s" : ""} today`
                               : "No assignments"}
                           </p>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0 gap-1 text-xs h-7"
-                        onClick={() => setAssignTarget(emp)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Assign
-                      </Button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={() => setAssignTarget(emp)}>
+                          <Plus className="h-3 w-3" /> Assign
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground">
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onClick={() => handleToggleHidden(emp)} className="gap-2">
+                              <Plane className="h-3.5 w-3.5 text-amber-500" />
+                              Set as on vacation
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setRemoveConfirmTarget(emp)} className="gap-2 text-destructive focus:text-destructive">
+                              <UserMinus className="h-3.5 w-3.5" />
+                              Remove from company
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </CardContent>
                   </Card>
                 );
               })}
+
+              {hiddenEmployees.length > 0 && (
+                <div className="pt-1">
+                  <button
+                    onClick={() => setShowHidden(!showHidden)}
+                    className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors px-1 py-1.5 rounded-md hover:bg-secondary/60"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Plane className="h-3 w-3" />
+                      {hiddenEmployees.length} on vacation
+                    </span>
+                    {showHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                  </button>
+
+                  {showHidden && (
+                    <div className="space-y-2 mt-2">
+                      {hiddenEmployees.map((emp: any) => {
+                        const name = emp.username || emp.firstName || "Unknown";
+                        return (
+                          <Card key={emp.clerkId} className="border-border/30 bg-secondary/30 opacity-70">
+                            <CardContent className="p-3 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <Avatar className="h-8 w-8 shrink-0">
+                                  <AvatarFallback className="bg-secondary text-muted-foreground uppercase text-xs">
+                                    {name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0">
+                                  <p className="font-medium leading-none truncate text-sm text-muted-foreground">{name}</p>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <Plane className="h-2.5 w-2.5 text-amber-500" />
+                                    <span className="text-xs text-amber-600 font-medium">On vacation</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground">
+                                    <MoreVertical className="h-3.5 w-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuItem onClick={() => handleToggleHidden(emp)} className="gap-2">
+                                    <UserCheck className="h-3.5 w-3.5 text-primary" />
+                                    Back from vacation
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => setRemoveConfirmTarget(emp)} className="gap-2 text-destructive focus:text-destructive">
+                                    <UserMinus className="h-3.5 w-3.5" />
+                                    Remove from company
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -487,6 +616,40 @@ function BossSchedule() {
           onClose={() => setEditTarget(null)}
         />
       )}
+
+      {/* Remove employee confirmation */}
+      <Dialog open={!!removeConfirmTarget} onOpenChange={(o) => !o && setRemoveConfirmTarget(null)}>
+        <DialogContent className="sm:max-w-[380px] bg-[#fafaf9]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <UserMinus className="h-5 w-5" />
+              Remove employee?
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-foreground">
+                {removeConfirmTarget?.username || removeConfirmTarget?.firstName}
+              </span>{" "}
+              will lose access to this company immediately. Their past assignments will remain. You can invite them back later with the company invite code.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setRemoveConfirmTarget(null)} disabled={removeEmployee.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => removeConfirmTarget && handleRemoveEmployee(removeConfirmTarget)}
+              disabled={removeEmployee.isPending}
+            >
+              {removeEmployee.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Removing...</>
+              ) : (
+                "Remove"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

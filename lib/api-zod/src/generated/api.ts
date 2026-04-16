@@ -25,6 +25,7 @@ export const ListUsersResponseItem = zod.object({
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
   companyId: zod.number().nullish(),
+  isHidden: zod.boolean().nullish(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
@@ -39,6 +40,40 @@ export const GetMeResponse = zod.object({
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
   companyId: zod.number().nullish(),
+  isHidden: zod.boolean().nullish(),
+});
+
+/**
+ * @summary Update employee (boss only) — hide/unhide
+ */
+export const PatchUserParams = zod.object({
+  clerkId: zod.coerce.string(),
+});
+
+export const PatchUserBody = zod.object({
+  isHidden: zod.boolean().nullish(),
+});
+
+export const PatchUserResponse = zod.object({
+  clerkId: zod.string(),
+  username: zod.string(),
+  email: zod.string(),
+  role: zod.enum(["boss", "employee"]),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+  companyId: zod.number().nullish(),
+  isHidden: zod.boolean().nullish(),
+});
+
+/**
+ * @summary Remove employee from company (boss only)
+ */
+export const RemoveEmployeeParams = zod.object({
+  clerkId: zod.coerce.string(),
+});
+
+export const RemoveEmployeeResponse = zod.object({
+  ok: zod.boolean(),
 });
 
 /**
@@ -56,6 +91,7 @@ export const SetUserRoleResponse = zod.object({
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
   companyId: zod.number().nullish(),
+  isHidden: zod.boolean().nullish(),
 });
 
 /**

@@ -24,6 +24,11 @@ export interface AppUser {
   firstName?: string | null;
   lastName?: string | null;
   companyId?: number | null;
+  isHidden?: boolean | null;
+}
+
+export interface PatchUserBody {
+  isHidden?: boolean | null;
 }
 
 export interface Company {
@@ -241,3 +246,7 @@ export interface HouseStats {
   monthly: number;
   totalAssignmentsToday: number;
 }
+
+export type RemoveEmployee200 = {
+  ok: boolean;
+};

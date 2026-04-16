@@ -28,6 +28,8 @@ import type {
   HouseStats,
   JoinCompanyBody,
   PatchTimingBody,
+  PatchUserBody,
+  RemoveEmployee200,
   SetRoleBody,
   UpdateAssignmentBody,
   UpdateHouseBody,
@@ -245,6 +247,177 @@ export function useGetMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Update employee (boss only) — hide/unhide
+ */
+export const getPatchUserUrl = (clerkId: string) => {
+  return `/api/users/${clerkId}`;
+};
+
+export const patchUser = async (
+  clerkId: string,
+  patchUserBody: PatchUserBody,
+  options?: RequestInit,
+): Promise<AppUser> => {
+  return customFetch<AppUser>(getPatchUserUrl(clerkId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(patchUserBody),
+  });
+};
+
+export const getPatchUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchUser>>,
+    TError,
+    { clerkId: string; data: BodyType<PatchUserBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof patchUser>>,
+  TError,
+  { clerkId: string; data: BodyType<PatchUserBody> },
+  TContext
+> => {
+  const mutationKey = ["patchUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchUser>>,
+    { clerkId: string; data: BodyType<PatchUserBody> }
+  > = (props) => {
+    const { clerkId, data } = props ?? {};
+
+    return patchUser(clerkId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PatchUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof patchUser>>
+>;
+export type PatchUserMutationBody = BodyType<PatchUserBody>;
+export type PatchUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update employee (boss only) — hide/unhide
+ */
+export const usePatchUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchUser>>,
+    TError,
+    { clerkId: string; data: BodyType<PatchUserBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof patchUser>>,
+  TError,
+  { clerkId: string; data: BodyType<PatchUserBody> },
+  TContext
+> => {
+  return useMutation(getPatchUserMutationOptions(options));
+};
+
+/**
+ * @summary Remove employee from company (boss only)
+ */
+export const getRemoveEmployeeUrl = (clerkId: string) => {
+  return `/api/users/${clerkId}`;
+};
+
+export const removeEmployee = async (
+  clerkId: string,
+  options?: RequestInit,
+): Promise<RemoveEmployee200> => {
+  return customFetch<RemoveEmployee200>(getRemoveEmployeeUrl(clerkId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveEmployeeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeEmployee>>,
+    TError,
+    { clerkId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeEmployee>>,
+  TError,
+  { clerkId: string },
+  TContext
+> => {
+  const mutationKey = ["removeEmployee"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeEmployee>>,
+    { clerkId: string }
+  > = (props) => {
+    const { clerkId } = props ?? {};
+
+    return removeEmployee(clerkId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveEmployeeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeEmployee>>
+>;
+
+export type RemoveEmployeeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove employee from company (boss only)
+ */
+export const useRemoveEmployee = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeEmployee>>,
+    TError,
+    { clerkId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeEmployee>>,
+  TError,
+  { clerkId: string },
+  TContext
+> => {
+  return useMutation(getRemoveEmployeeMutationOptions(options));
+};
 
 /**
  * @summary Set role for current user (called on sign-up)

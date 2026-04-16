@@ -15,4 +15,5 @@ export interface AppUser {
   firstName?: string | null;
   lastName?: string | null;
   companyId?: number | null;
+  isHidden?: boolean | null;
 }

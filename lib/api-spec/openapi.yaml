@@ -60,6 +60,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/AppUser"
 
+  /users/{clerkId}:
+    patch:
+      operationId: patchUser
+      tags: [users]
+      summary: Update employee (boss only) — hide/unhide
+      parameters:
+        - in: path
+          name: clerkId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+    delete:
+      operationId: removeEmployee
+      tags: [users]
+      summary: Remove employee from company (boss only)
+      parameters:
+        - in: path
+          name: clerkId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employee removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+
   /users/set-role:
     post:
       operationId: setUserRole
@@ -451,11 +498,21 @@ components:
         companyId:
           type: integer
           nullable: true
+        isHidden:
+          type: boolean
+          nullable: true
       required:
         - clerkId
         - username
         - email
         - role
+
+    PatchUserBody:
+      type: object
+      properties:
+        isHidden:
+          type: boolean
+          nullable: true
 
     Company:
       type: object
