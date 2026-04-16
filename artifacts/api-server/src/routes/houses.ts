@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { getAuth, clerkClient } from "@clerk/express";
 import { db, housesTable, assignmentsTable } from "@workspace/db";
 import {
   CreateHouseBody,
@@ -11,29 +10,9 @@ import {
   UpdateHouseNotesBody,
 } from "@workspace/api-zod";
 import { eq, count, and } from "drizzle-orm";
+import { requireAuthAndCompany } from "../lib/auth";
 
 const router = Router();
-
-async function requireAuthAndCompany(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  req.clerkUserId = auth.userId;
-  try {
-    const user = await clerkClient.users.getUser(auth.userId);
-    const companyId = user.publicMetadata?.companyId as number | undefined;
-    if (!companyId) {
-      res.status(403).json({ error: "No company setup. Please complete company setup first." });
-      return;
-    }
-    req.companyId = companyId;
-    next();
-  } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-}
 
 function formatHouse(h: typeof housesTable.$inferSelect) {
   return {
@@ -199,7 +178,9 @@ router.delete("/:id", requireAuthAndCompany, async (req: any, res) => {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
-    await db.delete(assignmentsTable).where(eq(assignmentsTable.houseId, parsed.data.id));
+    await db
+      .delete(assignmentsTable)
+      .where(and(eq(assignmentsTable.houseId, parsed.data.id), eq(assignmentsTable.companyId, req.companyId)));
     await db
       .delete(housesTable)
       .where(and(eq(housesTable.id, parsed.data.id), eq(housesTable.companyId, req.companyId)));

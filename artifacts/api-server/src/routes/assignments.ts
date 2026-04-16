@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { getAuth, clerkClient } from "@clerk/express";
 import { db, assignmentsTable, housesTable } from "@workspace/db";
 import {
   CreateAssignmentBody,
@@ -9,53 +8,28 @@ import {
   DeleteAssignmentParams,
 } from "@workspace/api-zod";
 import { eq, and } from "drizzle-orm";
+import { requireAuthAndCompany, batchUsernames } from "../lib/auth";
 
 const router = Router();
 
-async function requireAuthAndCompany(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  req.clerkUserId = auth.userId;
-  try {
-    const user = await clerkClient.users.getUser(auth.userId);
-    const companyId = user.publicMetadata?.companyId as number | undefined;
-    if (!companyId) {
-      res.status(403).json({ error: "No company setup. Please complete company setup first." });
-      return;
-    }
-    req.companyId = companyId;
-    req.userRole = (user.publicMetadata?.role as string) || "employee";
-    next();
-  } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-}
+type AssignmentRow = {
+  assignments: typeof assignmentsTable.$inferSelect;
+  houses: typeof housesTable.$inferSelect;
+};
 
-async function getUsernameById(clerkId: string): Promise<string | null> {
-  try {
-    const user = await clerkClient.users.getUser(clerkId);
-    const email = user.emailAddresses?.[0]?.emailAddress || "";
-    return (user.unsafeMetadata?.displayName as string) || user.username || user.firstName || email.split("@")[0] || null;
-  } catch {
-    return null;
-  }
-}
-
-async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect; houses: typeof housesTable.$inferSelect }) {
-  let assignedToUsername: string | null = null;
-  if (r.assignments.assignedToClerkId) {
-    assignedToUsername = await getUsernameById(r.assignments.assignedToClerkId);
-  }
+function formatRow(
+  r: AssignmentRow,
+  usernameMap: Record<string, string | null>
+) {
   return {
     id: r.assignments.id,
     houseId: r.assignments.houseId,
     houseName: r.houses.name,
     houseAddress: r.houses.mapLink || "",
     assignedToClerkId: r.assignments.assignedToClerkId,
-    assignedToUsername,
+    assignedToUsername: r.assignments.assignedToClerkId
+      ? (usernameMap[r.assignments.assignedToClerkId] ?? null)
+      : null,
     date: r.assignments.date,
     timeSlot: r.assignments.timeSlot,
     notes: r.assignments.notes,
@@ -72,7 +46,7 @@ async function formatRow(r: { assignments: typeof assignmentsTable.$inferSelect;
 router.get("/today", requireAuthAndCompany, async (req: any, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
-    let rows;
+    let rows: AssignmentRow[];
     if (req.userRole === "boss") {
       rows = await db
         .select()
@@ -92,7 +66,11 @@ router.get("/today", requireAuthAndCompany, async (req: any, res) => {
         ))
         .orderBy(assignmentsTable.timeSlot);
     }
-    res.json(await Promise.all(rows.map(formatRow)));
+    const clerkIds = rows
+      .map((r) => r.assignments.assignedToClerkId)
+      .filter((id): id is string => !!id);
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(rows.map((r) => formatRow(r, usernameMap)));
   } catch (err) {
     req.log.error({ err }, "Failed to get today's assignments");
     res.status(500).json({ error: "Internal server error" });
@@ -101,7 +79,7 @@ router.get("/today", requireAuthAndCompany, async (req: any, res) => {
 
 router.get("/", requireAuthAndCompany, async (req: any, res) => {
   try {
-    let rows;
+    let rows: AssignmentRow[];
     if (req.userRole === "boss") {
       rows = await db
         .select()
@@ -120,7 +98,11 @@ router.get("/", requireAuthAndCompany, async (req: any, res) => {
         ))
         .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
     }
-    res.json(await Promise.all(rows.map(formatRow)));
+    const clerkIds = rows
+      .map((r) => r.assignments.assignedToClerkId)
+      .filter((id): id is string => !!id);
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(rows.map((r) => formatRow(r, usernameMap)));
   } catch (err) {
     req.log.error({ err }, "Failed to list assignments");
     res.status(500).json({ error: "Internal server error" });
@@ -151,7 +133,9 @@ router.post("/", requireAuthAndCompany, async (req: any, res) => {
       res.status(404).json({ error: "House not found" });
       return;
     }
-    res.status(201).json(await formatRow({ assignments: a, houses: house }));
+    const clerkIds = a.assignedToClerkId ? [a.assignedToClerkId] : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.status(201).json(formatRow({ assignments: a, houses: house }, usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to create assignment");
     res.status(500).json({ error: "Internal server error" });
@@ -174,7 +158,11 @@ router.get("/:id", requireAuthAndCompany, async (req: any, res) => {
       res.status(404).json({ error: "Assignment not found" });
       return;
     }
-    res.json(await formatRow(rows[0]));
+    const clerkIds = rows[0].assignments.assignedToClerkId
+      ? [rows[0].assignments.assignedToClerkId]
+      : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(formatRow(rows[0], usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to get assignment");
     res.status(500).json({ error: "Internal server error" });
@@ -207,7 +195,9 @@ router.put("/:id", requireAuthAndCompany, async (req: any, res) => {
       res.status(404).json({ error: "House not found" });
       return;
     }
-    res.json(await formatRow({ assignments: a, houses: house }));
+    const clerkIds = a.assignedToClerkId ? [a.assignedToClerkId] : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(formatRow({ assignments: a, houses: house }, usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to update assignment");
     res.status(500).json({ error: "Internal server error" });
@@ -239,7 +229,9 @@ router.patch("/:id/timing", requireAuthAndCompany, async (req: any, res) => {
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
     if (!house) { res.status(404).json({ error: "House not found" }); return; }
-    res.json(await formatRow({ assignments: a, houses: house }));
+    const clerkIds = a.assignedToClerkId ? [a.assignedToClerkId] : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(formatRow({ assignments: a, houses: house }, usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to patch timing");
     res.status(500).json({ error: "Internal server error" });
@@ -258,7 +250,9 @@ router.post("/:id/start", requireAuthAndCompany, async (req: any, res) => {
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
     if (!house) { res.status(404).json({ error: "House not found" }); return; }
-    res.json(await formatRow({ assignments: a, houses: house }));
+    const clerkIds = a.assignedToClerkId ? [a.assignedToClerkId] : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(formatRow({ assignments: a, houses: house }, usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to start cleaning");
     res.status(500).json({ error: "Internal server error" });
@@ -269,7 +263,9 @@ router.post("/:id/finish", requireAuthAndCompany, async (req: any, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-    const completionNotes = typeof req.body?.completionNotes === "string" ? req.body.completionNotes.trim() || null : null;
+    const completionNotes = typeof req.body?.completionNotes === "string"
+      ? req.body.completionNotes.trim() || null
+      : null;
     const [a] = await db
       .update(assignmentsTable)
       .set({ finishedAt: new Date(), status: "completed", completionNotes })
@@ -278,7 +274,9 @@ router.post("/:id/finish", requireAuthAndCompany, async (req: any, res) => {
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
     if (!house) { res.status(404).json({ error: "House not found" }); return; }
-    res.json(await formatRow({ assignments: a, houses: house }));
+    const clerkIds = a.assignedToClerkId ? [a.assignedToClerkId] : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(formatRow({ assignments: a, houses: house }, usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to finish cleaning");
     res.status(500).json({ error: "Internal server error" });

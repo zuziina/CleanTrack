@@ -1,31 +1,9 @@
 import { Router } from "express";
-import { getAuth, clerkClient } from "@clerk/express";
 import { db, workSessionsTable } from "@workspace/db";
 import { eq, and, gte, lte } from "drizzle-orm";
+import { requireAuthAndCompany, batchUsernames } from "../lib/auth";
 
 const router = Router();
-
-async function requireAuthAndCompany(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  req.clerkUserId = auth.userId;
-  try {
-    const user = await clerkClient.users.getUser(auth.userId);
-    const companyId = user.publicMetadata?.companyId as number | undefined;
-    if (!companyId) {
-      res.status(403).json({ error: "No company setup." });
-      return;
-    }
-    req.companyId = companyId;
-    req.userRole = (user.publicMetadata?.role as string) || "employee";
-    next();
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-}
 
 function todayStr() {
   return new Date().toISOString().split("T")[0];
@@ -69,29 +47,18 @@ router.get("/", requireAuthAndCompany, async (req: any, res) => {
         .orderBy(workSessionsTable.date);
     }
 
-    const enriched = await Promise.all(
-      rows.map(async (s) => {
-        let username: string | null = null;
-        try {
-          const u = await clerkClient.users.getUser(s.clerkUserId);
-          username =
-            (u.unsafeMetadata?.displayName as string) ||
-            u.username ||
-            u.firstName ||
-            u.emailAddresses?.[0]?.emailAddress?.split("@")[0] ||
-            null;
-        } catch {}
-        return {
-          id: s.id,
-          clerkUserId: s.clerkUserId,
-          username,
-          date: s.date,
-          clockedInAt: s.clockedInAt?.toISOString() ?? null,
-          clockedOutAt: s.clockedOutAt?.toISOString() ?? null,
-          createdAt: s.createdAt.toISOString(),
-        };
-      })
-    );
+    const clerkIds = rows.map((s) => s.clerkUserId).filter(Boolean);
+    const usernameMap = await batchUsernames(clerkIds);
+
+    const enriched = rows.map((s) => ({
+      id: s.id,
+      clerkUserId: s.clerkUserId,
+      username: usernameMap[s.clerkUserId] ?? null,
+      date: s.date,
+      clockedInAt: s.clockedInAt?.toISOString() ?? null,
+      clockedOutAt: s.clockedOutAt?.toISOString() ?? null,
+      createdAt: s.createdAt.toISOString(),
+    }));
 
     res.json(enriched);
   } catch (err) {

@@ -1,18 +1,9 @@
 import { Router } from "express";
-import { getAuth, clerkClient } from "@clerk/express";
+import { clerkClient } from "@clerk/express";
 import { SetUserRoleBody } from "@workspace/api-zod";
+import { requireAuth } from "../lib/auth";
 
 const router = Router();
-
-function requireAuth(req: any, res: any, next: any) {
-  const auth = getAuth(req);
-  if (!auth?.userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  req.clerkUserId = auth.userId;
-  next();
-}
 
 function formatUser(user: any) {
   const role = (user.publicMetadata?.role as string) || "employee";

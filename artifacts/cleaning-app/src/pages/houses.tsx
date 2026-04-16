@@ -390,6 +390,10 @@ function HouseDetailModal({
       <DialogContent hideClose className="sm:max-w-[600px] p-0 bg-[#fafaf9] flex flex-col max-h-[92dvh] gap-0">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Loading property details</DialogTitle>
+              <DialogDescription>Please wait while the property details load.</DialogDescription>
+            </DialogHeader>
             <Skeleton className="h-8 w-2/3" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-[200px] w-full mt-4" />
