@@ -14,6 +14,7 @@ import SetupCompanyPage from "@/pages/setup-company";
 import ProfilePage from "@/pages/profile";
 import HousesPage from "@/pages/houses";
 import AttendancePage from "@/pages/attendance";
+import SchedulePage from "@/pages/schedule";
 import NotFound from "@/pages/not-found";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -126,6 +127,9 @@ function ClerkProviderWithRoutes() {
             <Route path="/setup-company" component={SetupCompanyPage} />
             <Route path="/profile">
               <ProtectedRoute component={ProfilePage} />
+            </Route>
+            <Route path="/schedule">
+              <ProtectedRoute component={SchedulePage} />
             </Route>
             <Route path="/houses">
               <ProtectedRoute component={HousesPage} />
