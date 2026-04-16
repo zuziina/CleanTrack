@@ -238,6 +238,7 @@ export default function SignUpPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="John Doe"
+                autoComplete="name"
               />
             </div>
 
@@ -249,6 +250,7 @@ export default function SignUpPage() {
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
                 placeholder="john@example.com"
+                autoComplete="email"
                 className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
               />
               {emailError && (
@@ -263,6 +265,7 @@ export default function SignUpPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
               />
               {password.length > 0 && password.length < 8 && (
                 <p className="text-xs text-muted-foreground">
