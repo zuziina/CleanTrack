@@ -1277,6 +1277,10 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
       <DialogContent className="sm:max-w-[580px] p-0 overflow-hidden bg-[#fafaf9] max-h-[90vh] overflow-y-auto">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
+            <DialogHeader>
+              <DialogTitle className="sr-only">Loading assignment details</DialogTitle>
+              <DialogDescription className="sr-only">Please wait while the assignment details load.</DialogDescription>
+            </DialogHeader>
             <Skeleton className="h-8 w-2/3" />
             <Skeleton className="h-4 w-1/3" />
             <Skeleton className="h-[200px] w-full mt-4" />

@@ -620,9 +620,9 @@ function DayEditDialog({
       <DialogContent className="sm:max-w-sm bg-[#fafaf9]">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">{formatDateLabel(dateStr)}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             {hasData ? "Edit your hours for this day" : "Add your hours for this day"}
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-1">
@@ -702,7 +702,7 @@ function BossAttendance() {
   const { sessions, isLoading: sessionsLoading } = useWorkSessions(monthStr);
   const { data: users, isLoading: usersLoading } = useListUsers();
 
-  const employees = useMemo(() => (users ?? []).filter((u: any) => u.role === "employee"), [users]);
+  const employees = useMemo(() => (users ?? []).filter((u: any) => u.role === "employee" && !u.isHidden), [users]);
 
   const selectedEmployee = useMemo(
     () => employees.find((e: any) => e.clerkId === selectedEmployeeId) ?? employees[0] ?? null,
