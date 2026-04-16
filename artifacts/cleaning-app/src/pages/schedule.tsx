@@ -245,6 +245,86 @@ function HouseSearchFilter({
   );
 }
 
+function HousePickerInput({
+  houses,
+  value,
+  onChange,
+}: {
+  houses: { id: number; name: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = houses.find((h) => String(h.id) === value);
+  const filtered = query
+    ? houses.filter((h) => h.name.toLowerCase().includes(query.toLowerCase()))
+    : houses;
+
+  return (
+    <div className="relative">
+      {selected ? (
+        <div className="flex items-center justify-between h-9 px-3 rounded-md border border-input bg-background text-sm">
+          <span className="truncate text-foreground">{selected.name}</span>
+          <button
+            type="button"
+            onClick={() => { onChange(""); setQuery(""); }}
+            className="text-muted-foreground hover:text-foreground transition-colors shrink-0 ml-2"
+            title="Clear selection"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className={cn(
+          "flex items-center gap-2 h-9 px-3 rounded-md border bg-background text-sm transition-colors",
+          open ? "border-ring ring-1 ring-ring/20" : "border-input"
+        )}>
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 120)}
+            placeholder="Search properties…"
+            className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
+          />
+          {query && (
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); setQuery(""); }}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {open && !selected && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-y-auto max-h-52">
+          {filtered.map((h) => (
+            <button
+              key={h.id}
+              type="button"
+              onMouseDown={() => { onChange(String(h.id)); setQuery(""); setOpen(false); }}
+              className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent transition-colors"
+            >
+              {h.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && !selected && filtered.length === 0 && query && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg px-3 py-3 text-sm text-muted-foreground">
+          No properties match
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BossSchedule() {
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(today);
@@ -1091,16 +1171,11 @@ function AssignModal({ user, defaultDate, onClose }: { user: any; defaultDate: s
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>Property *</Label>
-            <Select value={houseId} onValueChange={setHouseId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a property" />
-              </SelectTrigger>
-              <SelectContent>
-                {(houses ?? []).map((h: any) => (
-                  <SelectItem key={h.id} value={String(h.id)}>{h.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <HousePickerInput
+              houses={houses ?? []}
+              value={houseId}
+              onChange={setHouseId}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -1199,14 +1274,11 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-2">
               <Label>Property *</Label>
-              <Select value={houseId} onValueChange={setHouseId}>
-                <SelectTrigger><SelectValue placeholder="Select a property" /></SelectTrigger>
-                <SelectContent>
-                  {(houses ?? []).map((h: any) => (
-                    <SelectItem key={h.id} value={String(h.id)}>{h.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <HousePickerInput
+                houses={houses ?? []}
+                value={houseId}
+                onChange={setHouseId}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
