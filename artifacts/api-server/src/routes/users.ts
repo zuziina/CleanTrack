@@ -48,6 +48,23 @@ router.get("/me", requireAuth, async (req: any, res) => {
   }
 });
 
+router.patch("/me", requireAuth, async (req: any, res) => {
+  try {
+    const { displayName } = req.body;
+    if (typeof displayName !== "string" || !displayName.trim()) {
+      res.status(400).json({ error: "displayName is required" });
+      return;
+    }
+    const updated = await clerkClient.users.updateUser(req.clerkUserId, {
+      unsafeMetadata: { displayName: displayName.trim() },
+    });
+    res.json(formatUser(updated));
+  } catch (err) {
+    req.log.error({ err }, "Failed to update display name");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/set-role", requireAuth, async (req: any, res) => {
   try {
     const parsed = SetUserRoleBody.safeParse(req.body);

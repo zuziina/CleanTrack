@@ -46,8 +46,27 @@ A multi-tenant cleaning company app with authentication, two user roles (boss/em
 - Houses: searchable property grid, click for detail modal with editable notes
 
 ### Boss View
-- Profile: username, "Boss" badge, **company name + invite code card** (copy button), full employee list, assignment creation
+- Profile: username + pencil icon (inline edit), "Boss" badge, **company name + invite code card** (copy + settings buttons), **live Team Status** (who is clocked in now, refreshes every 60s), today's summary with per-employee progress, quick stats, schedule CTA
 - Houses: same as employee + editable notes
+
+### Company Settings (Boss only)
+- Settings gear icon on the company card opens a modal
+- Rename company (`PUT /api/companies/me`)
+- Regenerate invite code with 2-step confirmation (`POST /api/companies/me/regenerate-invite`)
+
+### Username Change (all users)
+- Pencil icon next to display name in profile header
+- Opens a dialog to update `unsafeMetadata.displayName` via `PATCH /api/users/me`
+
+### Live Team Status (Boss)
+- `GET /api/work-sessions/live` returns today's clock-in records for the company
+- Shows green "active" rows for currently clocked-in employees, gray rows for those who clocked out
+- Auto-refreshes every 60 seconds
+
+### Offline Cache
+- `@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister` installed
+- localStorage persister configured in `queryClient.ts` with 24h TTL (`gcTime` + `maxAge`)
+- React Query data survives page reloads and brief offline periods
 
 ## Important Clerk Note
 

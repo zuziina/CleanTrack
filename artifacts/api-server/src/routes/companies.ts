@@ -2,6 +2,7 @@ import { Router } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db, companiesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireAuthAndCompany } from "../lib/auth";
 
 const router = Router();
 
@@ -95,6 +96,66 @@ router.get("/me", requireAuth, async (req: any, res) => {
     res.json(formatCompany(company));
   } catch (err) {
     req.log.error({ err }, "Failed to get company");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* ── Update company name (boss only) ──────────────────────────────────── */
+router.put("/me", requireAuthAndCompany, async (req: any, res) => {
+  try {
+    if (req.userRole !== "boss") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const { name } = req.body;
+    if (!name?.trim()) {
+      res.status(400).json({ error: "Company name is required" });
+      return;
+    }
+    const [updated] = await db
+      .update(companiesTable)
+      .set({ name: name.trim() })
+      .where(eq(companiesTable.id, req.companyId))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "Company not found" });
+      return;
+    }
+    res.json(formatCompany(updated));
+  } catch (err) {
+    req.log.error({ err }, "Failed to update company");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* ── Regenerate invite code (boss only) ───────────────────────────────── */
+router.post("/me/regenerate-invite", requireAuthAndCompany, async (req: any, res) => {
+  try {
+    if (req.userRole !== "boss") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    let newCode = "";
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = generateInviteCode();
+      const [conflict] = await db.select().from(companiesTable).where(eq(companiesTable.inviteCode, candidate));
+      if (!conflict) {
+        newCode = candidate;
+        break;
+      }
+    }
+    if (!newCode) {
+      res.status(500).json({ error: "Failed to generate new invite code" });
+      return;
+    }
+    const [updated] = await db
+      .update(companiesTable)
+      .set({ inviteCode: newCode })
+      .where(eq(companiesTable.id, req.companyId))
+      .returning();
+    res.json(formatCompany(updated));
+  } catch (err) {
+    req.log.error({ err }, "Failed to regenerate invite code");
     res.status(500).json({ error: "Internal server error" });
   }
 });

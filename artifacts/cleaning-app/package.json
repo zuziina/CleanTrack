@@ -80,6 +80,8 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@clerk/react": "^6.2.1"
+    "@clerk/react": "^6.2.1",
+    "@tanstack/query-sync-storage-persister": "^5.90.0",
+    "@tanstack/react-query-persist-client": "^5.90.0"
   }
 }

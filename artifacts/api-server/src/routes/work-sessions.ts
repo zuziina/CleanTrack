@@ -67,6 +67,41 @@ router.get("/", requireAuthAndCompany, async (req: any, res) => {
   }
 });
 
+/* ── Who is clocked in right now (boss only) ──────────────────────────── */
+router.get("/live", requireAuthAndCompany, async (req: any, res) => {
+  try {
+    if (req.userRole !== "boss") {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const today = todayStr();
+    const rows = await db
+      .select()
+      .from(workSessionsTable)
+      .where(
+        and(
+          eq(workSessionsTable.companyId, req.companyId),
+          eq(workSessionsTable.date, today),
+        )
+      );
+
+    const clerkIds = rows.map((s) => s.clerkUserId).filter(Boolean);
+    const usernameMap = await batchUsernames(clerkIds);
+
+    const enriched = rows.map((s) => ({
+      clerkUserId: s.clerkUserId,
+      username: usernameMap[s.clerkUserId] ?? null,
+      clockedInAt: s.clockedInAt?.toISOString() ?? null,
+      clockedOutAt: s.clockedOutAt?.toISOString() ?? null,
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    req.log.error({ err }, "Failed to get live attendance");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/today", requireAuthAndCompany, async (req: any, res) => {
   try {
     const [session] = await db
