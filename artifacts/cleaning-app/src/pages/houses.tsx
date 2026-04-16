@@ -450,24 +450,28 @@ function HouseDetailModal({
             {/* Scrollable body */}
             <div className="overflow-y-auto flex-1 p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-5">
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    Owner Details
-                  </h4>
-                  <div className="bg-secondary/30 rounded-lg p-3 space-y-1.5 border border-border/50">
-                    <p className="font-medium text-foreground">{house.ownerName}</p>
-                    {house.ownerPhone && (
-                      <a href={`tel:${house.ownerPhone}`} className="block text-sm text-primary hover:underline">
-                        {house.ownerPhone}
-                      </a>
-                    )}
-                    {house.ownerEmail && (
-                      <a href={`mailto:${house.ownerEmail}`} className="block text-sm text-primary hover:underline">
-                        {house.ownerEmail}
-                      </a>
-                    )}
+                {(house.ownerName || house.ownerPhone || house.ownerEmail) && (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Owner Details
+                    </h4>
+                    <div className="bg-secondary/30 rounded-lg p-3 space-y-1.5 border border-border/50">
+                      {house.ownerName && (
+                        <p className="font-medium text-foreground">{house.ownerName}</p>
+                      )}
+                      {house.ownerPhone && (
+                        <a href={`tel:${house.ownerPhone}`} className="block text-sm text-primary hover:underline">
+                          {house.ownerPhone}
+                        </a>
+                      )}
+                      {house.ownerEmail && (
+                        <a href={`mailto:${house.ownerEmail}`} className="block text-sm text-primary hover:underline">
+                          {house.ownerEmail}
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
