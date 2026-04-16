@@ -57,6 +57,8 @@ import {
   Eye,
   UserMinus,
   Plane,
+  Search,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -167,6 +169,81 @@ export default function SchedulePage() {
 }
 
 /* ── Boss Schedule ───────────────────────────────────────────────────── */
+
+function HouseSearchFilter({
+  houses,
+  value,
+  onChange,
+}: {
+  houses: { id: number; name: string }[];
+  value: number | null;
+  onChange: (v: number | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selectedHouse = houses.find((h) => h.id === value);
+  const filtered = query
+    ? houses.filter((h) => h.name.toLowerCase().includes(query.toLowerCase()))
+    : houses;
+
+  if (selectedHouse) {
+    return (
+      <div className="flex items-center gap-1 bg-primary text-primary-foreground rounded-full pl-2.5 pr-1.5 py-0.5 h-6">
+        <span className="text-xs font-medium truncate max-w-[180px]">{selectedHouse.name}</span>
+        <button
+          onClick={() => onChange(null)}
+          className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
+          title="Clear house filter"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <div className={cn(
+        "flex items-center gap-1.5 h-6 px-2.5 rounded-full border bg-background text-xs transition-all",
+        open ? "border-primary/50 text-foreground" : "border-border text-muted-foreground hover:border-primary/40"
+      )}>
+        <Search className="h-3 w-3 shrink-0 opacity-60" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          placeholder="Search houses…"
+          className="bg-transparent outline-none text-xs w-28 placeholder:text-muted-foreground/50"
+        />
+        {query && (
+          <button onMouseDown={(e) => { e.preventDefault(); setQuery(""); }} className="opacity-50 hover:opacity-80">
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg overflow-hidden min-w-[200px] max-h-52 overflow-y-auto">
+          {filtered.map((h) => (
+            <button
+              key={h.id}
+              onMouseDown={() => { onChange(h.id); setQuery(""); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors"
+            >
+              {h.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && filtered.length === 0 && query && (
+        <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-xl shadow-lg px-3 py-2 text-xs text-muted-foreground min-w-[160px]">
+          No houses match
+        </div>
+      )}
+    </div>
+  );
+}
 
 function BossSchedule() {
   const today = new Date();
@@ -585,41 +662,15 @@ function BossSchedule() {
 
               {/* House filter */}
               {housesInSelection.length > 1 && (
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-14 shrink-0">
                     House
                   </span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      onClick={() => setFilterHouse(null)}
-                      className={cn(
-                        "h-6 px-2.5 rounded-full text-xs font-medium border transition-all",
-                        filterHouse === null
-                          ? "bg-primary/15 text-primary border-primary/40 font-semibold"
-                          : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                      )}
-                    >
-                      All
-                    </button>
-                    {housesInSelection.map((h) => {
-                      const isActive = filterHouse === h.id;
-                      return (
-                        <button
-                          key={h.id}
-                          onClick={() => setFilterHouse(isActive ? null : h.id)}
-                          className={cn(
-                            "h-6 px-2.5 rounded-full text-xs font-medium border transition-all max-w-[140px] truncate",
-                            isActive
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-                          )}
-                          title={h.name}
-                        >
-                          {h.name}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <HouseSearchFilter
+                    houses={housesInSelection}
+                    value={filterHouse}
+                    onChange={setFilterHouse}
+                  />
                 </div>
               )}
             </div>
