@@ -61,7 +61,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden pb-16 md:pb-0 min-w-0">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         {/* Mobile Header */}
         <header className="md:hidden border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -76,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </header>
 
         <div
-          className="flex-1 overflow-y-auto overscroll-contain touch-pan-y"
+          className="flex-1 overflow-y-auto overscroll-contain touch-pan-y pb-16 md:pb-0"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {children}
