@@ -76,13 +76,20 @@ function sessionDuration(s: WorkSession) {
   );
 }
 
-function getMonthGrid(year: number, month: number): (Date | null)[] {
-  const first = new Date(year, month, 1);
-  const last = new Date(year, month + 1, 0);
-  const startDow = (first.getDay() + 6) % 7;
-  const cells: (Date | null)[] = [];
+function getMonthGrid(year: number, month: number): (string | null)[] {
+  /* Build date strings directly from year/month/day components.
+     Never pass through Date.toISOString() — that converts to UTC first,
+     which shifts dates backward for UTC+ users (e.g. April 1 midnight local
+     becomes March 31 UTC, so "2026-04-01" becomes "2026-03-31" and all
+     hours entered for April 1 are silently stored in March). */
+  const mm = String(month + 1).padStart(2, "0");
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const cells: (string | null)[] = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
-  for (let d = 1; d <= last.getDate(); d++) cells.push(new Date(year, month, d));
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push(`${year}-${mm}-${String(d).padStart(2, "0")}`);
+  }
   while (cells.length % 7 !== 0) cells.push(null);
   return cells;
 }
@@ -250,7 +257,7 @@ function EmployeeAttendance() {
   }, [refetch, todayStr, todayState.reload]);
 
   const grid = getMonthGrid(monthRef.getFullYear(), monthRef.getMonth());
-  const weeks: (Date | null)[][] = [];
+  const weeks: (string | null)[][] = [];
   for (let i = 0; i < grid.length; i += 7) weeks.push(grid.slice(i, i + 7));
 
   return (
@@ -293,15 +300,15 @@ function EmployeeAttendance() {
             </div>
             {weeks.map((week, wi) => (
               <div key={wi} className="grid grid-cols-7 border-b border-border last:border-b-0">
-                {week.map((day, di) => {
-                  if (!day) return <div key={di} className="min-h-[80px] bg-muted/30 border-r border-border last:border-r-0" />;
-                  const ds = toDateStr(day);
+                {week.map((ds, di) => {
+                  if (!ds) return <div key={di} className="min-h-[80px] bg-muted/30 border-r border-border last:border-r-0" />;
                   const isToday = ds === todayStr;
                   const s = isToday ? effectiveTodaySession : (sessionByDate[ds] ?? null);
                   const isFuture = ds > todayStr;
                   const isPast = !isToday && !isFuture;
                   const dur = s ? sessionDuration(s) : null;
                   const isEmpty = !s?.clockedInAt;
+                  const dayNum = Number(ds.split("-")[2]);
 
                   return (
                     <div
@@ -320,7 +327,7 @@ function EmployeeAttendance() {
                         "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
                         isToday ? "bg-primary text-primary-foreground" : "text-foreground/70"
                       )}>
-                        {day.getDate()}
+                        {dayNum}
                       </div>
 
                       {!isFuture && isEmpty && (
@@ -910,7 +917,7 @@ function BossAttendance() {
 
   const todayStr = toDateStr(today);
   const grid = getMonthGrid(monthRef.getFullYear(), monthRef.getMonth());
-  const weeks: (Date | null)[][] = [];
+  const weeks: (string | null)[][] = [];
   for (let i = 0; i < grid.length; i += 7) weeks.push(grid.slice(i, i + 7));
 
   if (usersLoading) {
@@ -1012,13 +1019,13 @@ function BossAttendance() {
               </div>
               {weeks.map((week, wi) => (
                 <div key={wi} className="grid grid-cols-7 border-b border-border last:border-b-0">
-                  {week.map((day, di) => {
-                    if (!day) return <div key={di} className="min-h-[80px] bg-secondary/20 border-r border-border last:border-r-0" />;
-                    const ds = toDateStr(day);
+                  {week.map((ds, di) => {
+                    if (!ds) return <div key={di} className="min-h-[80px] bg-secondary/20 border-r border-border last:border-r-0" />;
                     const isToday = ds === todayStr;
                     const isFuture = ds > todayStr;
                     const s = sessionByDate[ds] ?? null;
                     const dur = s ? sessionDuration(s) : null;
+                    const dayNum = Number(ds.split("-")[2]);
 
                     return (
                       <div
@@ -1032,7 +1039,7 @@ function BossAttendance() {
                           "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
                           isToday ? "bg-amber-500 text-white" : "text-foreground/70"
                         )}>
-                          {day.getDate()}
+                          {dayNum}
                         </div>
 
                         {s?.clockedInAt && (
