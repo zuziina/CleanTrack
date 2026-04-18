@@ -706,9 +706,14 @@ function localTimeToISO(timeStr: string, dateStr: string): string | null {
   return new Date(y, mo - 1, d, h, m, 0, 0).toISOString();
 }
 
+const WEEKDAY_NAMES = [
+  "Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday",
+];
+
 function formatDateLabel(dateStr: string) {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  const dow = new Date(y, m - 1, d).getDay();
+  return `${WEEKDAY_NAMES[dow]}, ${MONTH_NAMES[m - 1]} ${d}`;
 }
 
 function calcDialogDuration(inStr: string, outStr: string): string | null {
