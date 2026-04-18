@@ -1081,6 +1081,13 @@ function AssignmentCard({
                 )}
               </div>
             )}
+
+            {showAssignee && assignment.completionNotes && (
+              <div className="rounded-md bg-emerald-50 border border-emerald-200 px-2.5 py-2 space-y-0.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Completion Notes</p>
+                <p className="text-xs text-foreground/80">{assignment.completionNotes}</p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center sm:items-end justify-between sm:flex-col gap-2 shrink-0">
