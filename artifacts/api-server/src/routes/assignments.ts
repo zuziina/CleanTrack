@@ -45,7 +45,8 @@ function formatRow(
 
 router.get("/today", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const _now = new Date();
+    const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
     let rows: AssignmentRow[];
     if (req.userRole === "boss") {
       rows = await db
@@ -120,7 +121,8 @@ router.post("/", requireAuthAndCompany, async (req: any, res) => {
       res.status(400).json({ error: "Invalid request body" });
       return;
     }
-    const today = new Date().toISOString().split("T")[0];
+    const _now2 = new Date();
+    const today = `${_now2.getFullYear()}-${String(_now2.getMonth() + 1).padStart(2, "0")}-${String(_now2.getDate()).padStart(2, "0")}`;
     const values = {
       ...parsed.data,
       date: parsed.data.date ?? today,

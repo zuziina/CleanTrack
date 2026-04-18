@@ -37,7 +37,9 @@ function formatHouse(h: typeof housesTable.$inferSelect) {
 
 router.get("/stats", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
     const all = await db.select().from(housesTable).where(eq(housesTable.companyId, req.companyId));
     const active = all.filter((h) => h.status === "active").length;
     const inactive = all.filter((h) => h.status === "inactive").length;

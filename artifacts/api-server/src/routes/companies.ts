@@ -70,7 +70,7 @@ router.post("/", requireAuth, async (req: any, res) => {
     const [company] = await db.insert(companiesTable).values({ name: name.trim(), inviteCode }).returning();
 
     await clerkClient.users.updateUserMetadata(req.clerkUserId, {
-      publicMetadata: { ...meUser.publicMetadata, companyId: company.id },
+      publicMetadata: { ...meUser.publicMetadata, companyId: company.id, role: "boss" },
     });
 
     res.status(201).json(formatCompany(company));

@@ -91,7 +91,7 @@ import { toast } from "sonner";
 /* ── Helpers ─────────────────────────────────────────────────────────── */
 
 function toDateString(d: Date) {
-  return d.toISOString().split("T")[0];
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function getWeekDays(referenceDate: Date): Date[] {
@@ -1142,7 +1142,7 @@ function AssignModal({ user, defaultDate, onClose }: { user: any; defaultDate: s
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!houseId || !guestCount) return;
+    if (!houseId || guestCount === "") return;
     createAssignment.mutate(
       { data: { houseId: parseInt(houseId, 10), assignedToClerkId: user.clerkId, date: date || undefined, timeSlot: timeSlot || undefined, guestCount: parseInt(guestCount, 10), status: "pending", priority, notes: notes || undefined } },
       {
@@ -1193,7 +1193,7 @@ function AssignModal({ user, defaultDate, onClose }: { user: any; defaultDate: s
               <Input type="number" min="0" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Maintenance</Label>
+              <Label>Priority</Label>
               <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -1210,7 +1210,7 @@ function AssignModal({ user, defaultDate, onClose }: { user: any; defaultDate: s
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={createAssignment.isPending || !houseId || !guestCount}>
+            <Button type="submit" disabled={createAssignment.isPending || !houseId || guestCount === ""}>
               {createAssignment.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Assign Property"}
             </Button>
           </div>
@@ -1244,7 +1244,7 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!houseId || !guestCount) return;
+    if (!houseId || guestCount === "") return;
     updateAssignment.mutate(
       { id: assignment.id, data: { houseId: parseInt(houseId, 10), date: date || undefined, timeSlot: timeSlot || undefined, guestCount: parseInt(guestCount, 10), status, priority, notes: notes || undefined } },
       { onSuccess: () => { toast.success("Assignment updated"); invalidate(); onClose(); }, onError: () => toast.error("Failed to update assignment") }
@@ -1334,7 +1334,7 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
               </Button>
               <div className="flex gap-3">
                 <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>Cancel</Button>
-                <Button type="submit" disabled={isBusy || !houseId || !guestCount}>
+                <Button type="submit" disabled={isBusy || !houseId || guestCount === ""}>
                   {updateAssignment.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
                 </Button>
               </div>
