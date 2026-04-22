@@ -9,6 +9,13 @@ function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
+function clientDate(value: unknown): string {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  return todayStr();
+}
+
 router.get("/", requireAuthAndCompany, async (req: any, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
@@ -74,7 +81,7 @@ router.get("/live", requireAuthAndCompany, async (req: any, res) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
-    const today = todayStr();
+    const today = clientDate(req.query.date);
     const rows = await db
       .select()
       .from(workSessionsTable)
@@ -111,7 +118,7 @@ router.get("/today", requireAuthAndCompany, async (req: any, res) => {
         and(
           eq(workSessionsTable.clerkUserId, req.clerkUserId),
           eq(workSessionsTable.companyId, req.companyId),
-          eq(workSessionsTable.date, todayStr()),
+          eq(workSessionsTable.date, clientDate(req.query.date)),
         )
       );
     res.json(session ?? null);
@@ -123,7 +130,7 @@ router.get("/today", requireAuthAndCompany, async (req: any, res) => {
 
 router.post("/clock-in", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const today = todayStr();
+    const today = clientDate(req.body?.date);
     const [existing] = await db
       .select()
       .from(workSessionsTable)
@@ -165,7 +172,7 @@ router.post("/clock-in", requireAuthAndCompany, async (req: any, res) => {
 
 router.post("/clock-out", requireAuthAndCompany, async (req: any, res) => {
   try {
-    const today = todayStr();
+    const today = clientDate(req.body?.date);
     const [existing] = await db
       .select()
       .from(workSessionsTable)
@@ -283,7 +290,7 @@ router.delete("/today", requireAuthAndCompany, async (req: any, res) => {
         and(
           eq(workSessionsTable.clerkUserId, req.clerkUserId),
           eq(workSessionsTable.companyId, req.companyId),
-          eq(workSessionsTable.date, todayStr()),
+          eq(workSessionsTable.date, clientDate(req.query.date)),
         )
       );
     res.status(204).send();

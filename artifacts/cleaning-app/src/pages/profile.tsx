@@ -56,16 +56,17 @@ function getGreeting() {
 }
 
 function toDateString(d: Date) {
-  return d.toISOString().split("T")[0];
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /* ── Custom hooks for new endpoints ─────────────────────────────────── */
 
 function useLiveAttendance() {
+  const todayStr = toDateString(new Date());
   return useQuery({
-    queryKey: ["work-sessions", "live"],
+    queryKey: ["work-sessions", "live", todayStr],
     queryFn: async () => {
-      const res = await fetch("/api/work-sessions/live", { credentials: "include" });
+      const res = await fetch(`/api/work-sessions/live?date=${todayStr}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch live attendance");
       return res.json() as Promise<Array<{
         clerkUserId: string;

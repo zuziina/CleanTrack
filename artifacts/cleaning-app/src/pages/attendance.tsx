@@ -130,18 +130,18 @@ function useWorkSessions(month: string) {
   return { sessions, isLoading, refetch: fetch_ };
 }
 
-function useTodaySession() {
+function useTodaySession(todayStr: string) {
   const [session, setSession] = useState<WorkSession | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(() => {
     setIsLoading(true);
-    fetch("/api/work-sessions/today", { credentials: "include" })
+    fetch(`/api/work-sessions/today?date=${todayStr}`, { credentials: "include" })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { setSession(d); setIsLoading(false); })
       .catch(() => { setSession(null); setIsLoading(false); });
-  }, []);
+  }, [todayStr]);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -151,12 +151,13 @@ function useTodaySession() {
       const r = await fetch("/api/work-sessions/clock-in", {
         method: "POST", credentials: "include",
         headers: { "content-type": "application/json" },
+        body: JSON.stringify({ date: todayStr }),
       });
       if (r.ok) { const d = await r.json(); setSession(d); }
       else toast.error("Could not clock in");
     } catch { toast.error("Could not clock in"); }
     finally { setBusy(false); }
-  }, []);
+  }, [todayStr]);
 
   const clockOut = useCallback(async () => {
     setBusy(true);
@@ -164,24 +165,25 @@ function useTodaySession() {
       const r = await fetch("/api/work-sessions/clock-out", {
         method: "POST", credentials: "include",
         headers: { "content-type": "application/json" },
+        body: JSON.stringify({ date: todayStr }),
       });
       if (r.ok) { const d = await r.json(); setSession(d); }
       else toast.error("Could not clock out");
     } catch { toast.error("Could not clock out"); }
     finally { setBusy(false); }
-  }, []);
+  }, [todayStr]);
 
   const undoClock = useCallback(async () => {
     setBusy(true);
     try {
-      const r = await fetch("/api/work-sessions/today", {
+      const r = await fetch(`/api/work-sessions/today?date=${todayStr}`, {
         method: "DELETE", credentials: "include",
       });
       if (r.ok) setSession(null);
       else toast.error("Could not reset");
     } catch { toast.error("Could not reset"); }
     finally { setBusy(false); }
-  }, []);
+  }, [todayStr]);
 
   return { session, isLoading, busy, clockIn, clockOut, undoClock, reload };
 }
@@ -217,10 +219,11 @@ export default function AttendancePage() {
 
 function EmployeeAttendance() {
   const today = new Date();
+  const todayStr = toDateStr(today);
   const [monthRef, setMonthRef] = useState(today);
   const monthStr = toMonthStr(monthRef);
   const { sessions, isLoading: sessionsLoading, refetch } = useWorkSessions(monthStr);
-  const todayState = useTodaySession();
+  const todayState = useTodaySession(todayStr);
   const [editingDay, setEditingDay] = useState<{ dateStr: string; session: WorkSession | null } | null>(null);
 
   const prevMonth = () => setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
@@ -239,7 +242,6 @@ function EmployeeAttendance() {
     }, 0);
   }, [sessions]);
 
-  const todayStr = toDateStr(today);
   const todaySession = sessionByDate[todayStr];
   const effectiveTodaySession = todayState.session !== undefined ? todayState.session : todaySession ?? null;
 
