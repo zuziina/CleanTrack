@@ -1488,6 +1488,138 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
 
   const isBusy = updateAssignment.isPending || deleteAssignment.isPending;
 
+  const formBody = (
+    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <div className="space-y-2">
+        <Label>Property *</Label>
+        <HousePickerInput
+          houses={houses ?? []}
+          value={houseId}
+          onChange={setHouseId}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Date</Label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Time Slot</Label>
+          <Input placeholder="e.g. 9:00 – 11:00 AM" value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Guests Today *</Label>
+          <Input type="number" min="0" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Priority</Label>
+          <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Status</Label>
+        <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Notes (optional)</Label>
+        <Textarea placeholder="Any specific instructions..." value={notes} onChange={(e) => setNotes(e.target.value)} className="resize-none" />
+      </div>
+      {assignment.completionNotes && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Completion Notes from Employee</p>
+          <p className="text-sm text-foreground/80">{assignment.completionNotes}</p>
+        </div>
+      )}
+      <div className="flex justify-between gap-3 pt-2">
+        <Button type="button" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setShowDeleteConfirm(true)} disabled={isBusy}>
+          <Trash2 className="h-4 w-4 mr-2" /> Delete
+        </Button>
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>Cancel</Button>
+          <Button type="submit" disabled={isBusy || !houseId || guestCount === ""}>
+            {updateAssignment.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+
+  const deleteConfirmDialog = (
+    <Dialog open={showDeleteConfirm} onOpenChange={(o) => !o && setShowDeleteConfirm(false)}>
+      <DialogContent className="sm:max-w-[360px] bg-[#fafaf9]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" /> Delete assignment?
+          </DialogTitle>
+          <DialogDescription>
+            This will permanently remove the assignment for{" "}
+            <span className="font-semibold text-foreground">{assignment.houseName}</span>. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleteAssignment.isPending}>Cancel</Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleteAssignment.isPending}>
+            {deleteAssignment.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (assignment.issuePhotoCount > 0) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+          <div className="flex gap-3 w-full max-w-[820px] max-h-[90dvh]">
+            <div className="flex-[2] bg-[#fafaf9] rounded-xl flex flex-col overflow-hidden shadow-xl">
+              <div className="flex items-start justify-between px-6 pt-5 pb-1 shrink-0">
+                <div>
+                  <h2 className="text-lg font-semibold leading-tight">Edit Assignment</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    <span className="font-semibold text-foreground">{assignment.houseName}</span>
+                    {assignment.assignedToUsername && <> &mdash; {assignment.assignedToUsername}</>}
+                  </p>
+                </div>
+                <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors mt-0.5 shrink-0">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-6 pb-6">
+                {formBody}
+              </div>
+            </div>
+            <div className="flex-[1] bg-[#fafaf9] rounded-xl overflow-y-auto shadow-xl">
+              <IssuePhotoSection
+                assignmentId={assignment.id}
+                readOnly={true}
+              />
+            </div>
+          </div>
+        </div>
+        {deleteConfirmDialog}
+      </>
+    );
+  }
+
   return (
     <>
       <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -1499,105 +1631,10 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
               {assignment.assignedToUsername && <> &mdash; {assignment.assignedToUsername}</>}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <Label>Property *</Label>
-              <HousePickerInput
-                houses={houses ?? []}
-                value={houseId}
-                onChange={setHouseId}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Time Slot</Label>
-                <Input placeholder="e.g. 9:00 – 11:00 AM" value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Guests Today *</Label>
-                <Input type="number" min="0" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={(v: any) => setStatus(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Notes (optional)</Label>
-              <Textarea placeholder="Any specific instructions..." value={notes} onChange={(e) => setNotes(e.target.value)} className="resize-none" />
-            </div>
-            {assignment.completionNotes && (
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 space-y-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Completion Notes from Employee</p>
-                <p className="text-sm text-foreground/80">{assignment.completionNotes}</p>
-              </div>
-            )}
-            {assignment.issuePhotoCount > 0 && (
-              <div className="-mx-1">
-                <IssuePhotoSection
-                  assignmentId={assignment.id}
-                  readOnly={true}
-                />
-              </div>
-            )}
-            <div className="flex justify-between gap-3 pt-2">
-              <Button type="button" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setShowDeleteConfirm(true)} disabled={isBusy}>
-                <Trash2 className="h-4 w-4 mr-2" /> Delete
-              </Button>
-              <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>Cancel</Button>
-                <Button type="submit" disabled={isBusy || !houseId || guestCount === ""}>
-                  {updateAssignment.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}
-                </Button>
-              </div>
-            </div>
-          </form>
+          {formBody}
         </DialogContent>
       </Dialog>
-
-      <Dialog open={showDeleteConfirm} onOpenChange={(o) => !o && setShowDeleteConfirm(false)}>
-        <DialogContent className="sm:max-w-[360px] bg-[#fafaf9]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" /> Delete assignment?
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently remove the assignment for{" "}
-              <span className="font-semibold text-foreground">{assignment.houseName}</span>. This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleteAssignment.isPending}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteAssignment.isPending}>
-              {deleteAssignment.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {deleteConfirmDialog}
     </>
   );
 }
