@@ -790,12 +790,12 @@ function BossSchedule() {
             <div className="space-y-3">
               {filteredAssignments.map((a: any) =>
                 a.issuePhotoCount > 0 ? (
-                  <div key={a.id} className="flex gap-3 items-start">
+                  <div key={a.id} className="flex gap-3 items-stretch">
                     <div className="flex-[2] min-w-0">
                       <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
                     </div>
                     <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
-                      <IssuePhotoSection assignmentId={a.id} readOnly={true} />
+                      <PhotoStackPanel assignmentId={a.id} />
                     </div>
                   </div>
                 ) : (
@@ -1172,6 +1172,161 @@ function useIssuePhotos(assignmentId: number) {
     },
     staleTime: 30_000,
   });
+}
+
+/* ── Photo Stack Panel (schedule page, boss view) ───────────────────── */
+
+function PhotoStackPanel({ assignmentId }: { assignmentId: number }) {
+  const { data: photos = [], refetch, isLoading } = useIssuePhotos(assignmentId);
+  const qc = useQueryClient();
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const deletePhoto = useMutation({
+    mutationFn: async (photoId: number) => {
+      const res = await fetch(`/api/assignments/${assignmentId}/issue-photos/${photoId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete photo");
+    },
+    onSuccess: () => {
+      refetch();
+      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+    },
+  });
+
+  const safeIdx = Math.min(activeIdx, Math.max(0, photos.length - 1));
+  const currentPhoto = photos[safeIdx] ?? null;
+
+  const STACK_ROTATIONS = [-5, 3, -2];
+
+  return (
+    <>
+      <button
+        onClick={() => { setActiveIdx(0); setGalleryOpen(true); }}
+        className="h-full w-full flex flex-col items-center justify-center gap-2.5 px-3 py-4 hover:bg-amber-50/60 transition-colors"
+        disabled={isLoading || photos.length === 0}
+      >
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-amber-400" />
+        ) : photos.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No photos</p>
+        ) : (
+          <>
+            <div className="relative" style={{ width: 72, height: 72 }}>
+              {photos.slice(0, 3).map((p, i) => (
+                <img
+                  key={p.id}
+                  src={objectPathToUrl(p.objectPath)}
+                  alt="Issue photo"
+                  className="absolute inset-0 w-full h-full object-cover rounded-lg border-2 border-white shadow-md"
+                  style={{
+                    transform: `rotate(${STACK_ROTATIONS[i] ?? 0}deg)`,
+                    zIndex: 3 - i,
+                  }}
+                />
+              ))}
+            </div>
+            <span className="text-[11px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+              {photos.length} {photos.length === 1 ? "photo" : "photos"}
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-none">click to view</span>
+          </>
+        )}
+      </button>
+
+      <Dialog open={galleryOpen} onOpenChange={(o) => { if (!o) setGalleryOpen(false); }}>
+        <DialogContent className="sm:max-w-[560px] bg-[#fafaf9]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TriangleAlert className="h-4 w-4 text-amber-500" />
+              Issue Photos
+              {photos.length > 1 && (
+                <span className="text-sm font-normal text-muted-foreground ml-1">
+                  {safeIdx + 1} / {photos.length}
+                </span>
+              )}
+            </DialogTitle>
+            <DialogDescription className="sr-only">Browse issue photos for this assignment</DialogDescription>
+          </DialogHeader>
+
+          {currentPhoto && (
+            <div className="space-y-3">
+              <div className="relative aspect-video bg-black/90 rounded-xl overflow-hidden">
+                <img
+                  src={objectPathToUrl(currentPhoto.objectPath)}
+                  alt="Issue photo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {currentPhoto.description && (
+                <p className="text-sm text-foreground/80 leading-snug">{currentPhoto.description}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {new Date(currentPhoto.uploadedAt).toLocaleDateString([], {
+                  month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline" size="icon"
+                    onClick={() => setActiveIdx(i => Math.max(0, i - 1))}
+                    disabled={safeIdx === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline" size="icon"
+                    onClick={() => setActiveIdx(i => Math.min(photos.length - 1, i + 1))}
+                    disabled={safeIdx === photos.length - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost" size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    const newIdx = Math.max(0, safeIdx - 1);
+                    deletePhoto.mutate(currentPhoto.id, {
+                      onSuccess: () => setActiveIdx(newIdx),
+                    });
+                  }}
+                  disabled={deletePhoto.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Delete
+                </Button>
+              </div>
+
+              {photos.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 pt-1">
+                  {photos.map((p, i) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setActiveIdx(i)}
+                      className={cn(
+                        "shrink-0 rounded-lg overflow-hidden border-2 transition-all",
+                        safeIdx === i ? "border-amber-500 opacity-100" : "border-transparent opacity-50 hover:opacity-80"
+                      )}
+                    >
+                      <img src={objectPathToUrl(p.objectPath)} alt="" className="h-14 w-14 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {photos.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">All photos have been deleted.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 function IssuePhotoSection({
