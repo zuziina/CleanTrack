@@ -401,6 +401,14 @@ function BossSchedule() {
     return map;
   }, [allAssignments]);
 
+  const datesWithIssues = useMemo(() => {
+    const s = new Set<string>();
+    (allAssignments ?? []).forEach((a: any) => {
+      if (a.issuePhotoCount > 0) s.add(a.date);
+    });
+    return s;
+  }, [allAssignments]);
+
   const selectedDateStr = toDateString(selectedDate);
   const selectedAssignments = assignmentsByDate[selectedDateStr] ?? [];
 
@@ -478,12 +486,13 @@ function BossSchedule() {
             const isToday = ds === toDateString(today);
             const isSelected = ds === selectedDateStr;
             const count = (assignmentsByDate[ds] ?? []).length;
+            const hasIssues = datesWithIssues.has(ds);
             return (
               <button
                 key={ds}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 transition-all text-sm font-medium",
+                  "relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 transition-all text-sm font-medium",
                   isSelected
                     ? "border-amber-500 bg-amber-500 text-white shadow-md"
                     : isToday
@@ -491,6 +500,12 @@ function BossSchedule() {
                     : "border-transparent bg-secondary hover:border-border hover:bg-secondary/80 text-foreground"
                 )}
               >
+                {hasIssues && (
+                  <TriangleAlert className={cn(
+                    "absolute top-1.5 right-1.5 h-3 w-3",
+                    isSelected ? "text-white/80" : "text-amber-500"
+                  )} />
+                )}
                 <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
                   {DAY_SHORT[i]}
                 </span>
