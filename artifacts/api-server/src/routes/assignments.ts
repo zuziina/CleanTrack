@@ -39,6 +39,7 @@ function formatRow(
     startedAt: r.assignments.startedAt?.toISOString() ?? null,
     finishedAt: r.assignments.finishedAt?.toISOString() ?? null,
     completionNotes: r.assignments.completionNotes ?? null,
+    issuePhotoCount: r.assignments.issuePhotoCount ?? 0,
     createdAt: r.assignments.createdAt.toISOString(),
   };
 }

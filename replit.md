@@ -90,7 +90,8 @@ Always import from `@clerk/react/legacy` for sign-up/sign-in custom flows that u
 
 - `companies` — `id, name, inviteCode (unique), createdAt`
 - `houses` — all company properties; has `companyId` FK
-- `assignments` — cleaning jobs: houseId, assignedToClerkId, date, timeSlot, guestCount, status, priority, notes; has `companyId` FK
+- `assignments` — cleaning jobs: houseId, assignedToClerkId, date, timeSlot, guestCount, status, priority, notes, issuePhotoCount; has `companyId` FK
+- `assignment_issue_photos` — per-assignment issue photos: assignmentId, companyId, uploadedByClerkId, objectPath (GCS), description, uploadedAt, expiresAt (60 days)
 - (No profile table — user data stored in Clerk; companyId stored in Clerk publicMetadata)
 
 ## API Routes
@@ -107,6 +108,10 @@ Always import from `@clerk/react/legacy` for sign-up/sign-in custom flows that u
 - `PATCH /api/assignments/:id/timing` — update start/finish timestamps
 - `POST /api/assignments/:id/start` — mark in-progress
 - `POST /api/assignments/:id/finish` — mark complete
+- `GET/POST /api/assignments/:id/issue-photos` — list/add issue photos for an assignment
+- `DELETE /api/assignments/:id/issue-photos/:photoId` — delete a specific issue photo
+- `POST /api/storage/uploads/request-url` — get a presigned GCS URL for direct browser upload (auth required)
+- `GET /api/storage/objects/*path` — serve private GCS objects (auth required)
 - `GET /api/houses/stats` — company-scoped stats summary
 - `GET/POST /api/houses` — company-scoped houses
 - `GET/PUT/DELETE /api/houses/:id` — single house (company-scoped)

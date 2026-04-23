@@ -59,6 +59,8 @@ import {
   Plane,
   Search,
   X,
+  TriangleAlert,
+  ImagePlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,7 +87,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -134,6 +136,10 @@ function formatTime(iso: string) {
 function toTimeInputValue(iso: string) {
   const d = new Date(iso);
   return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+
+function objectPathToUrl(objectPath: string) {
+  return `/api/storage/objects/${objectPath.replace(/^\/objects\//, "")}`;
 }
 
 function buildIsoFromTimeInput(originalIso: string, timeValue: string) {
@@ -1088,6 +1094,12 @@ function AssignmentCard({
                 <p className="text-xs text-foreground/80">{assignment.completionNotes}</p>
               </div>
             )}
+            {showAssignee && assignment.issuePhotoCount > 0 && (
+              <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                <TriangleAlert className="h-3 w-3 shrink-0" />
+                <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center sm:items-end justify-between sm:flex-col gap-2 shrink-0">
@@ -1130,6 +1142,215 @@ function AssignmentCard({
         </CardContent>
       </div>
     </Card>
+  );
+}
+
+/* ── Issue Photo Hooks & Section ────────────────────────────────────── */
+
+function useIssuePhotos(assignmentId: number) {
+  return useQuery({
+    queryKey: ["issue-photos", assignmentId],
+    queryFn: async () => {
+      const res = await fetch(`/api/assignments/${assignmentId}/issue-photos`);
+      if (!res.ok) throw new Error("Failed to fetch photos");
+      return res.json() as Promise<Array<{
+        id: number; assignmentId: number; objectPath: string;
+        description: string | null; uploadedByClerkId: string;
+        uploadedAt: string; expiresAt: string;
+      }>>;
+    },
+    staleTime: 30_000,
+  });
+}
+
+function IssuePhotoSection({
+  assignmentId,
+  myClerkId,
+  readOnly = false,
+  onCountChange,
+}: {
+  assignmentId: number;
+  myClerkId?: string;
+  readOnly?: boolean;
+  onCountChange?: (delta: number) => void;
+}) {
+  const { data: photos = [], refetch, isLoading } = useIssuePhotos(assignmentId);
+  const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingDesc, setPendingDesc] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const addPhoto = useMutation({
+    mutationFn: async ({ objectPath, description }: { objectPath: string; description: string }) => {
+      const res = await fetch(`/api/assignments/${assignmentId}/issue-photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath, description: description.trim() || undefined }),
+      });
+      if (!res.ok) throw new Error("Failed to save photo");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      onCountChange?.(1);
+    },
+  });
+
+  const deletePhoto = useMutation({
+    mutationFn: async (photoId: number) => {
+      const res = await fetch(`/api/assignments/${assignmentId}/issue-photos/${photoId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete photo");
+    },
+    onSuccess: () => {
+      refetch();
+      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      onCountChange?.(-1);
+    },
+  });
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPendingFile(file);
+    e.target.value = "";
+  };
+
+  const handleSubmitPhoto = async () => {
+    if (!pendingFile) return;
+    setUploading(true);
+    try {
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: pendingFile.name, size: pendingFile.size, contentType: pendingFile.type }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": pendingFile.type },
+        body: pendingFile,
+      });
+      if (!uploadRes.ok) throw new Error("Upload to storage failed");
+
+      await addPhoto.mutateAsync({ objectPath, description: pendingDesc });
+      setPendingFile(null);
+      setPendingDesc("");
+      toast.success("Photo submitted");
+    } catch (err: any) {
+      toast.error(err.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="px-6 py-4 border-b border-border bg-amber-50/30">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+          <TriangleAlert className="h-3.5 w-3.5" />
+          Issue Photos
+          {photos.length > 0 && <span className="bg-amber-200 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{photos.length}</span>}
+        </h4>
+        {!readOnly && (
+          <>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors"
+            >
+              <ImagePlus className="h-3.5 w-3.5" />
+              Add Photo
+            </button>
+          </>
+        )}
+      </div>
+
+      {pendingFile && !readOnly && (
+        <div className="mb-3 bg-white border border-amber-200 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <img
+              src={URL.createObjectURL(pendingFile)}
+              alt="Preview"
+              className="h-16 w-16 object-cover rounded-md border border-border"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">{pendingFile.name}</p>
+              <p className="text-[10px] text-muted-foreground">{(pendingFile.size / 1024).toFixed(0)} KB</p>
+            </div>
+            <button onClick={() => setPendingFile(null)} className="text-muted-foreground hover:text-destructive">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <input
+            type="text"
+            placeholder="Short description (optional)..."
+            value={pendingDesc}
+            onChange={(e) => setPendingDesc(e.target.value)}
+            className="w-full text-sm border border-border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+          />
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="flex-1" onClick={() => { setPendingFile(null); setPendingDesc(""); }} disabled={uploading}>Cancel</Button>
+            <Button size="sm" className="flex-1 bg-amber-600 hover:bg-amber-700 text-white gap-1.5" onClick={handleSubmitPhoto} disabled={uploading}>
+              {uploading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Uploading...</> : "Submit"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground text-center py-2">Loading photos…</div>
+      ) : photos.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-2">
+          {readOnly ? "No issue photos reported." : "No photos yet. Tap 'Add Photo' to report a problem."}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {photos.map((p) => (
+            <div key={p.id} className="flex items-start gap-2.5 bg-white border border-border/60 rounded-lg p-2">
+              <button onClick={() => setLightbox(objectPathToUrl(p.objectPath))} className="shrink-0">
+                <img
+                  src={objectPathToUrl(p.objectPath)}
+                  alt="Issue photo"
+                  className="h-14 w-14 object-cover rounded-md border border-border hover:opacity-80 transition-opacity"
+                />
+              </button>
+              <div className="flex-1 min-w-0">
+                {p.description && <p className="text-xs text-foreground/80 leading-snug">{p.description}</p>}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {new Date(p.uploadedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+              {(readOnly || p.uploadedByClerkId === myClerkId) && (
+                <button
+                  onClick={() => deletePhoto.mutate(p.id)}
+                  disabled={deletePhoto.isPending}
+                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 shrink-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="Issue photo" className="max-w-full max-h-full object-contain rounded-lg" />
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white bg-black/40 rounded-full p-1.5">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1333,6 +1554,14 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 space-y-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Completion Notes from Employee</p>
                 <p className="text-sm text-foreground/80">{assignment.completionNotes}</p>
+              </div>
+            )}
+            {assignment.issuePhotoCount > 0 && (
+              <div className="-mx-1">
+                <IssuePhotoSection
+                  assignmentId={assignment.id}
+                  readOnly={true}
+                />
               </div>
             )}
             <div className="flex justify-between gap-3 pt-2">
@@ -1609,6 +1838,17 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                 </div>
               )}
             </div>
+
+            {(inProgress || done) && (
+              <IssuePhotoSection
+                assignmentId={assignment.id}
+                myClerkId={assignment.assignedToClerkId ?? undefined}
+                readOnly={false}
+                onCountChange={(delta) =>
+                  setAssignment((a: any) => ({ ...a, issuePhotoCount: Math.max(0, (a.issuePhotoCount ?? 0) + delta) }))
+                }
+              />
+            )}
 
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-5">
