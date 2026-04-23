@@ -337,6 +337,7 @@ function BossSchedule() {
   const [weekRef, setWeekRef] = useState<Date>(today);
   const [assignTarget, setAssignTarget] = useState<any>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
+  const [photoTarget, setPhotoTarget] = useState<number | null>(null);
   const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterHouse, setFilterHouse] = useState<number | null>(null);
@@ -425,6 +426,11 @@ function BossSchedule() {
   }, [selectedAssignments, filterEmployee, filterStatus, filterHouse]);
 
   const hasActiveFilter = filterEmployee !== null || filterStatus !== null || filterHouse !== null;
+
+  useEffect(() => {
+    const first = filteredAssignments.find((a: any) => a.issuePhotoCount > 0);
+    setPhotoTarget(first?.id ?? null);
+  }, [selectedDateStr]);
 
   const formattedSelected = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
@@ -645,7 +651,9 @@ function BossSchedule() {
         </div>
 
         {/* Assignments panel */}
-        <div className="lg:col-span-7 space-y-3">
+        <div className="lg:col-span-7">
+          <div className={photoTarget !== null ? "flex gap-3 items-start" : "space-y-3"}>
+          <div className={cn("space-y-3", photoTarget !== null && "flex-[2] min-w-0")}>
           {/* Panel header */}
           <div className="flex items-start justify-between border-b border-border/50 pb-2.5 gap-3">
             <div>
@@ -789,10 +797,24 @@ function BossSchedule() {
           ) : (
             <div className="space-y-3">
               {filteredAssignments.map((a: any) => (
-                <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
+                <AssignmentCard
+                  key={a.id}
+                  assignment={a}
+                  showAssignee
+                  onEdit={() => setEditTarget(a)}
+                  onShowPhotos={a.issuePhotoCount > 0 ? () => setPhotoTarget(a.id) : undefined}
+                  isPhotoActive={photoTarget === a.id}
+                />
               ))}
             </div>
           )}
+          </div>
+          {photoTarget !== null && (
+            <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden self-start sticky top-4 max-h-[75dvh] overflow-y-auto">
+              <IssuePhotoSection assignmentId={photoTarget} readOnly={true} />
+            </div>
+          )}
+          </div>
         </div>
       </div>
 
@@ -1012,11 +1034,15 @@ function AssignmentCard({
   showAssignee = false,
   onEdit,
   onClick,
+  onShowPhotos,
+  isPhotoActive = false,
 }: {
   assignment: any;
   showAssignee?: boolean;
   onEdit?: () => void;
   onClick?: () => void;
+  onShowPhotos?: () => void;
+  isPhotoActive?: boolean;
 }) {
   return (
     <Card
@@ -1095,10 +1121,25 @@ function AssignmentCard({
               </div>
             )}
             {showAssignee && assignment.issuePhotoCount > 0 && (
-              <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
-                <TriangleAlert className="h-3 w-3 shrink-0" />
-                <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
-              </div>
+              onShowPhotos ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onShowPhotos(); }}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors text-left border",
+                    isPhotoActive
+                      ? "text-amber-900 bg-amber-200 border-amber-400 font-semibold"
+                      : "text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100"
+                  )}
+                >
+                  <TriangleAlert className="h-3 w-3 shrink-0" />
+                  <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                  <TriangleAlert className="h-3 w-3 shrink-0" />
+                  <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
+                </div>
+              )
             )}
           </div>
 
@@ -1581,44 +1622,6 @@ function EditAssignmentModal({ assignment, onClose }: { assignment: any; onClose
       </DialogContent>
     </Dialog>
   );
-
-  if (assignment.issuePhotoCount > 0) {
-    return (
-      <>
-        <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-        >
-          <div className="flex gap-3 w-full max-w-[820px] max-h-[90dvh]">
-            <div className="flex-[2] bg-[#fafaf9] rounded-xl flex flex-col overflow-hidden shadow-xl">
-              <div className="flex items-start justify-between px-6 pt-5 pb-1 shrink-0">
-                <div>
-                  <h2 className="text-lg font-semibold leading-tight">Edit Assignment</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    <span className="font-semibold text-foreground">{assignment.houseName}</span>
-                    {assignment.assignedToUsername && <> &mdash; {assignment.assignedToUsername}</>}
-                  </p>
-                </div>
-                <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors mt-0.5 shrink-0">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="overflow-y-auto px-6 pb-6">
-                {formBody}
-              </div>
-            </div>
-            <div className="flex-[1] bg-[#fafaf9] rounded-xl overflow-y-auto shadow-xl">
-              <IssuePhotoSection
-                assignmentId={assignment.id}
-                readOnly={true}
-              />
-            </div>
-          </div>
-        </div>
-        {deleteConfirmDialog}
-      </>
-    );
-  }
 
   return (
     <>
