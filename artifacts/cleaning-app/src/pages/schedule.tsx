@@ -61,6 +61,7 @@ import {
   X,
   TriangleAlert,
   ImagePlus,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1199,6 +1200,25 @@ function PhotoStackPanel({ assignmentId }: { assignmentId: number }) {
 
   const STACK_ROTATIONS = [-5, 3, -2];
 
+  const handleDownload = async (photo: typeof currentPhoto) => {
+    if (!photo) return;
+    try {
+      const res = await fetch(objectPathToUrl(photo.objectPath));
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = photo.objectPath.split("/").pop() ?? "issue-photo.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error("Download failed");
+    }
+  };
+
   return (
     <>
       <button
@@ -1285,20 +1305,30 @@ function PhotoStackPanel({ assignmentId }: { assignmentId: number }) {
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button
-                  variant="ghost" size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    const newIdx = Math.max(0, safeIdx - 1);
-                    deletePhoto.mutate(currentPhoto.id, {
-                      onSuccess: () => setActiveIdx(newIdx),
-                    });
-                  }}
-                  disabled={deletePhoto.isPending}
-                >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
-                  Delete
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline" size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDownload(currentPhoto)}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="ghost" size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      const newIdx = Math.max(0, safeIdx - 1);
+                      deletePhoto.mutate(currentPhoto.id, {
+                        onSuccess: () => setActiveIdx(newIdx),
+                      });
+                    }}
+                    disabled={deletePhoto.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    Delete
+                  </Button>
+                </div>
               </div>
 
               {photos.length > 1 && (
