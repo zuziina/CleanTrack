@@ -337,7 +337,6 @@ function BossSchedule() {
   const [weekRef, setWeekRef] = useState<Date>(today);
   const [assignTarget, setAssignTarget] = useState<any>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
-  const [photoTarget, setPhotoTarget] = useState<number | null>(null);
   const [filterEmployee, setFilterEmployee] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterHouse, setFilterHouse] = useState<number | null>(null);
@@ -426,11 +425,6 @@ function BossSchedule() {
   }, [selectedAssignments, filterEmployee, filterStatus, filterHouse]);
 
   const hasActiveFilter = filterEmployee !== null || filterStatus !== null || filterHouse !== null;
-
-  useEffect(() => {
-    const first = filteredAssignments.find((a: any) => a.issuePhotoCount > 0);
-    setPhotoTarget(first?.id ?? null);
-  }, [selectedDateStr]);
 
   const formattedSelected = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
@@ -651,9 +645,7 @@ function BossSchedule() {
         </div>
 
         {/* Assignments panel */}
-        <div className="lg:col-span-7">
-          <div className={photoTarget !== null ? "flex gap-3 items-start" : "space-y-3"}>
-          <div className={cn("space-y-3", photoTarget !== null && "flex-[2] min-w-0")}>
+        <div className="lg:col-span-7 space-y-3">
           {/* Panel header */}
           <div className="flex items-start justify-between border-b border-border/50 pb-2.5 gap-3">
             <div>
@@ -796,25 +788,22 @@ function BossSchedule() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {filteredAssignments.map((a: any) => (
-                <AssignmentCard
-                  key={a.id}
-                  assignment={a}
-                  showAssignee
-                  onEdit={() => setEditTarget(a)}
-                  onShowPhotos={a.issuePhotoCount > 0 ? () => setPhotoTarget(a.id) : undefined}
-                  isPhotoActive={photoTarget === a.id}
-                />
-              ))}
+              {filteredAssignments.map((a: any) =>
+                a.issuePhotoCount > 0 ? (
+                  <div key={a.id} className="flex gap-3 items-start">
+                    <div className="flex-[2] min-w-0">
+                      <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
+                    </div>
+                    <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
+                      <IssuePhotoSection assignmentId={a.id} readOnly={true} />
+                    </div>
+                  </div>
+                ) : (
+                  <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
+                )
+              )}
             </div>
           )}
-          </div>
-          {photoTarget !== null && (
-            <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden self-start sticky top-4 max-h-[75dvh] overflow-y-auto">
-              <IssuePhotoSection assignmentId={photoTarget} readOnly={true} />
-            </div>
-          )}
-          </div>
         </div>
       </div>
 
@@ -1034,15 +1023,11 @@ function AssignmentCard({
   showAssignee = false,
   onEdit,
   onClick,
-  onShowPhotos,
-  isPhotoActive = false,
 }: {
   assignment: any;
   showAssignee?: boolean;
   onEdit?: () => void;
   onClick?: () => void;
-  onShowPhotos?: () => void;
-  isPhotoActive?: boolean;
 }) {
   return (
     <Card
@@ -1121,25 +1106,10 @@ function AssignmentCard({
               </div>
             )}
             {showAssignee && assignment.issuePhotoCount > 0 && (
-              onShowPhotos ? (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onShowPhotos(); }}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors text-left border",
-                    isPhotoActive
-                      ? "text-amber-900 bg-amber-200 border-amber-400 font-semibold"
-                      : "text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100"
-                  )}
-                >
-                  <TriangleAlert className="h-3 w-3 shrink-0" />
-                  <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
-                </button>
-              ) : (
-                <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
-                  <TriangleAlert className="h-3 w-3 shrink-0" />
-                  <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
-                </div>
-              )
+              <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                <TriangleAlert className="h-3 w-3 shrink-0" />
+                <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
+              </div>
             )}
           </div>
 
