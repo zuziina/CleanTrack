@@ -773,7 +773,7 @@ function EditHouseModal({
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button
               onClick={handleSave}
-              disabled={updateHouse.isPending || !form.name || !form.ownerName}
+              disabled={updateHouse.isPending || !form.name}
               className="min-w-[100px]"
             >
               {updateHouse.isPending ? "Saving..." : "Save Changes"}
@@ -972,7 +972,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={handleCreate}
-            disabled={createHouse.isPending || !form.name || !form.ownerName}
+            disabled={createHouse.isPending || !form.name}
             className="min-w-[120px]"
           >
             {createHouse.isPending ? "Adding..." : "Add Property"}
