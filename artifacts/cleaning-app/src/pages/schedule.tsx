@@ -492,7 +492,7 @@ function BossSchedule() {
                 key={ds}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
-                  "relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 transition-all text-sm font-medium",
+                  "flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border-2 transition-all text-sm font-medium",
                   isSelected
                     ? "border-amber-500 bg-amber-500 text-white shadow-md"
                     : isToday
@@ -500,12 +500,6 @@ function BossSchedule() {
                     : "border-transparent bg-secondary hover:border-border hover:bg-secondary/80 text-foreground"
                 )}
               >
-                {hasIssues && (
-                  <TriangleAlert className={cn(
-                    "absolute top-1.5 right-1.5 h-3 w-3",
-                    isSelected ? "text-white/80" : "text-amber-500"
-                  )} />
-                )}
                 <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
                   {DAY_SHORT[i]}
                 </span>
@@ -519,6 +513,14 @@ function BossSchedule() {
                   </span>
                 ) : (
                   <span className="h-4" />
+                )}
+                {hasIssues ? (
+                  <TriangleAlert className={cn(
+                    "h-3 w-3",
+                    isSelected ? "text-white/80" : "text-amber-500"
+                  )} />
+                ) : (
+                  <span className="h-3" />
                 )}
               </button>
             );
