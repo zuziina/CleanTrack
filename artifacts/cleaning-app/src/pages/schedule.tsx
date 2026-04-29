@@ -1539,7 +1539,8 @@ function IssuePhotoSection({
                   {new Date(p.uploadedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
-              {(readOnly || p.uploadedByClerkId === myClerkId) && (
+              {/* Bug 1 fix: only show delete button when NOT readOnly and it's the uploader's own photo */}
+              {(!readOnly && p.uploadedByClerkId === myClerkId) && (
                 <button
                   onClick={() => deletePhoto.mutate(p.id)}
                   disabled={deletePhoto.isPending}
@@ -2049,7 +2050,8 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
               )}
             </div>
 
-            {(inProgress || done) && (
+            {/* Bug 2 fix: show IssuePhotoSection whenever job has been started, not just inProgress/done */}
+            {assignment.startedAt && (
               <IssuePhotoSection
                 assignmentId={assignment.id}
                 myClerkId={assignment.assignedToClerkId ?? undefined}
