@@ -1465,10 +1465,10 @@ function IssuePhotoSection({
   };
 
   return (
-    <div className="px-6 py-4 border-b border-border bg-amber-50/30">
+    <div>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-semibold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
-          <TriangleAlert className="h-3.5 w-3.5" />
+        <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
+          <TriangleAlert className="h-4 w-4" />
           Issue Photos
           {photos.length > 0 && <span className="bg-amber-200 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{photos.length}</span>}
         </h4>
@@ -1477,9 +1477,9 @@ function IssuePhotoSection({
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors"
+              className="flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 active:bg-amber-300 px-3 py-2 rounded-lg transition-colors touch-manipulation"
             >
-              <ImagePlus className="h-3.5 w-3.5" />
+              <ImagePlus className="h-4 w-4" />
               Add Photo
             </button>
           </>
@@ -1852,6 +1852,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
   const [editTimeValue, setEditTimeValue] = useState("");
   const [showFinishNotes, setShowFinishNotes] = useState(false);
   const [completionNotesInput, setCompletionNotesInput] = useState("");
+  const issuePhotoRef = useRef<HTMLDivElement>(null);
 
   const elapsed = useLiveElapsed(assignment.startedAt ?? null, assignment.finishedAt ?? null);
 
@@ -1861,7 +1862,12 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
 
   const handleStart = () => {
     startCleaning.mutate({ id: assignment.id }, {
-      onSuccess: (data) => { setAssignment(data); qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() }); qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() }); },
+      onSuccess: (data) => {
+        setAssignment(data);
+        qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+        qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+        setTimeout(() => issuePhotoRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 150);
+      },
       onError: () => toast.error("Failed to start cleaning"),
     });
   };
@@ -2049,18 +2055,19 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                   )}
                 </div>
               )}
+              {(inProgress || done) && (
+                <div ref={issuePhotoRef} className="mt-4 pt-4 border-t border-border/40">
+                  <IssuePhotoSection
+                    assignmentId={assignment.id}
+                    myClerkId={assignment.assignedToClerkId ?? undefined}
+                    readOnly={false}
+                    onCountChange={(delta) =>
+                      setAssignment((a: any) => ({ ...a, issuePhotoCount: Math.max(0, (a.issuePhotoCount ?? 0) + delta) }))
+                    }
+                  />
+                </div>
+              )}
             </div>
-
-            {(inProgress || done) && (
-              <IssuePhotoSection
-                assignmentId={assignment.id}
-                myClerkId={assignment.assignedToClerkId ?? undefined}
-                readOnly={false}
-                onCountChange={(delta) =>
-                  setAssignment((a: any) => ({ ...a, issuePhotoCount: Math.max(0, (a.issuePhotoCount ?? 0) + delta) }))
-                }
-              />
-            )}
 
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-5">
