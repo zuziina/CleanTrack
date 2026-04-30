@@ -736,7 +736,7 @@ function EditHouseModal({
             </Section>
 
             <Section title="Owner Details">
-              <Field label="Owner Name *">
+              <Field label="Owner Name">
                 <Input value={form.ownerName} onChange={(e) => set("ownerName", e.target.value)} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
@@ -945,7 +945,7 @@ function AddHouseModal({ onClose }: { onClose: () => void }) {
           </Section>
 
           <Section title="Owner Details">
-            <Field label="Owner Name *">
+            <Field label="Owner Name">
               <Input value={form.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="e.g. Jane Smith" />
             </Field>
             <div className="grid grid-cols-2 gap-3">
