@@ -74,4 +74,3 @@ R2_ENDPOINT = "https://3095c88c464c44c50917bc0247dcc020.r2.cloudflarestorage.com
 R2_ACCOUNT_ID = "3095c88c464c44c50917bc0247dcc020"
 
 [userenv.production]
-WIPE_ON_START = "true"
