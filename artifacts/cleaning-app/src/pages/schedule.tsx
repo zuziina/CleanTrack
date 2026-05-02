@@ -1393,6 +1393,8 @@ function IssuePhotoSection({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingDesc, setPendingDesc] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [batchUploading, setBatchUploading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
   const [lightbox, setLightbox] = useState<string | null>(null);
 
   const addPhoto = useMutation({
@@ -1429,9 +1431,59 @@ function IssuePhotoSection({
   });
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setPendingFile(file);
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      setPendingFile(files[0]);
+    } else {
+      handleBatchUpload(files);
+    }
+  };
+
+  const handleBatchUpload = async (files: File[]) => {
+    setBatchUploading(true);
+    setBatchProgress({ done: 0, total: files.length });
+
+    const uploadOne = async (file: File) => {
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error(`Failed to get upload URL for ${file.name}`);
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error(`Upload failed for ${file.name}`);
+
+      const saveRes = await fetch(`/api/assignments/${assignmentId}/issue-photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath }),
+      });
+      if (!saveRes.ok) throw new Error(`Failed to save photo record for ${file.name}`);
+
+      setBatchProgress((p) => ({ ...p, done: p.done + 1 }));
+      onCountChange?.(1);
+    };
+
+    try {
+      await Promise.all(files.map(uploadOne));
+      toast.success(`${files.length} photos uploaded`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Some uploads failed");
+    } finally {
+      await refetch();
+      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      setBatchUploading(false);
+      setBatchProgress({ done: 0, total: 0 });
+    }
   };
 
   const handleSubmitPhoto = async () => {
@@ -1474,13 +1526,17 @@ function IssuePhotoSection({
         </h4>
         {!readOnly && (
           <>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelected} />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 active:bg-amber-300 px-3 py-2 rounded-lg transition-colors touch-manipulation"
+              disabled={batchUploading || uploading}
+              className="flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 active:bg-amber-300 px-3 py-2 rounded-lg transition-colors touch-manipulation disabled:opacity-50 disabled:pointer-events-none"
             >
-              <ImagePlus className="h-4 w-4" />
-              Add Photo
+              {batchUploading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />{batchProgress.done}/{batchProgress.total}</>
+              ) : (
+                <><ImagePlus className="h-4 w-4" />Add Photo</>
+              )}
             </button>
           </>
         )}
