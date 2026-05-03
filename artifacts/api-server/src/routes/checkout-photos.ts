@@ -132,8 +132,11 @@ router.post("/", requireAuthAndCompany, async (req: any, res) => {
       return;
     }
 
-    if (assignment.checkoutStatus !== "pending_checkout") {
-      res.status(409).json({ error: "Checkout photos can only be added when assignment is in pending_checkout state" });
+    if (
+      assignment.checkoutStatus !== "pending_checkout" &&
+      assignment.checkoutStatus !== "checkout_complete"
+    ) {
+      res.status(409).json({ error: "Checkout photos can only be added after the cleaning session is finished" });
       return;
     }
 
@@ -182,11 +185,6 @@ router.post("/", requireAuthAndCompany, async (req: any, res) => {
 
 router.delete("/:photoId", requireAuthAndCompany, async (req: any, res) => {
   try {
-    if (req.userRole !== "boss") {
-      res.status(403).json({ error: "Only bosses can delete checkout photos" });
-      return;
-    }
-
     const assignmentId = Number(req.params.id);
     const photoId = Number(req.params.photoId);
     if (isNaN(assignmentId) || isNaN(photoId)) {
@@ -207,6 +205,11 @@ router.delete("/:photoId", requireAuthAndCompany, async (req: any, res) => {
 
     if (!photo) {
       res.status(404).json({ error: "Photo not found" });
+      return;
+    }
+
+    if (req.userRole !== "boss" && photo.uploadedByClerkId !== req.clerkUserId) {
+      res.status(403).json({ error: "You can only delete your own photos" });
       return;
     }
 

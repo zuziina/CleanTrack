@@ -1822,9 +1822,11 @@ function IssuePhotoSection({
 
 function CheckoutPhotoSection({
   assignmentId,
+  myClerkId,
   onCountUpdated,
 }: {
   assignmentId: number;
+  myClerkId?: string;
   onCountUpdated?: (count: number) => void;
 }) {
   const { data: photos = [], refetch, isLoading } = useCheckoutPhotos(assignmentId);
@@ -1833,6 +1835,23 @@ function CheckoutPhotoSection({
   const [uploading, setUploading] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
   const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const deletePhoto = useMutation({
+    mutationFn: async (photoId: number) => {
+      const res = await fetch(`/api/assignments/${assignmentId}/checkout-photos/${photoId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete photo");
+    },
+    onSuccess: async () => {
+      const updated = await refetch();
+      const newCount = updated.data?.length ?? 0;
+      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      onCountUpdated?.(newCount);
+    },
+    onError: () => toast.error("Failed to delete photo"),
+  });
 
   const count = photos.length;
   const reached = count >= CHECKOUT_MIN;
@@ -1960,19 +1979,34 @@ function CheckoutPhotoSection({
           No photos yet. Photograph the main areas of the property.
         </p>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-2">
           {photos.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setLightbox(objectPathToUrl(p.objectPath))}
-              className="relative aspect-square rounded-lg overflow-hidden border border-emerald-200 hover:opacity-90 transition-opacity bg-emerald-50"
-            >
-              <img
-                src={objectPathToUrl(p.objectPath)}
-                alt="Checkout photo"
-                className="w-full h-full object-cover"
-              />
-            </button>
+            <div key={p.id} className="flex items-center gap-2.5 bg-white border border-border/60 rounded-lg p-2">
+              <button
+                onClick={() => setLightbox(objectPathToUrl(p.objectPath))}
+                className="shrink-0"
+              >
+                <img
+                  src={objectPathToUrl(p.objectPath)}
+                  alt="Checkout photo"
+                  className="h-14 w-14 object-cover rounded-md border border-border hover:opacity-80 transition-opacity"
+                />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground">
+                  {new Date(p.uploadedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+              {p.uploadedByClerkId === myClerkId && (
+                <button
+                  onClick={() => deletePhoto.mutate(p.id)}
+                  disabled={deletePhoto.isPending}
+                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 shrink-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -2508,6 +2542,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                 <div ref={checkoutPhotoRef} className="mt-4 pt-4 border-t border-emerald-200/70 bg-emerald-50/40 -mx-6 px-6 pb-2">
                   <CheckoutPhotoSection
                     assignmentId={assignment.id}
+                    myClerkId={assignment.assignedToClerkId ?? undefined}
                     onCountUpdated={(count) => {
                       setLocalCheckoutCount(count);
                       qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
