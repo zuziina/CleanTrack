@@ -1980,7 +1980,7 @@ function CheckoutPhotoSection({
           No photos yet. Photograph the main areas of the property.
         </p>
       ) : (
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollSnapType: "x mandatory" }}>
+        <div className="w-full min-w-0 flex gap-2 overflow-x-auto pb-1" style={{ scrollSnapType: "x mandatory" }}>
           {photos.map((p, i) => (
             <button
               key={p.id}
@@ -2005,17 +2005,18 @@ function CheckoutPhotoSection({
           onClick={() => setLightboxIndex(null)}
         >
           {/* top bar */}
-          <div
-            className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span className="text-white/70 text-sm font-medium">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
+            <span
+              className="text-white/70 text-sm font-medium"
+              onClick={(e) => e.stopPropagation()}
+            >
               {lightboxIndex + 1} / {photos.length}
             </span>
             <div className="flex items-center gap-3">
               {photos[lightboxIndex]?.uploadedByClerkId === myClerkId && (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     const id = photos[lightboxIndex]!.id;
                     const nextIndex = lightboxIndex > 0 ? lightboxIndex - 1 : photos.length > 1 ? 0 : null;
                     deletePhoto.mutate(id, {
@@ -2029,7 +2030,7 @@ function CheckoutPhotoSection({
                 </button>
               )}
               <button
-                onClick={() => setLightboxIndex(null)}
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
                 className="text-white/70 hover:text-white transition-colors"
               >
                 <X className="h-6 w-6" />
@@ -2037,26 +2038,21 @@ function CheckoutPhotoSection({
             </div>
           </div>
 
-          {/* photo */}
-          <div
-            className="flex-1 flex items-center justify-center px-4 min-h-0"
-            onClick={(e) => e.stopPropagation()}
-          >
+          {/* photo — stop propagation so tapping the image doesn't close */}
+          <div className="flex-1 flex items-center justify-center px-4 min-h-0">
             <img
               src={objectPathToUrl(photos[lightboxIndex]!.objectPath)}
               alt={`Checkout photo ${lightboxIndex + 1}`}
               className="max-w-full max-h-full object-contain rounded-lg"
               style={{ maxHeight: "calc(100vh - 120px)" }}
+              onClick={(e) => e.stopPropagation()}
             />
           </div>
 
           {/* bottom nav */}
-          <div
-            className="flex items-center justify-between px-4 pb-8 pt-3 shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex items-center justify-between px-4 pb-8 pt-3 shrink-0">
             <button
-              onClick={() => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))}
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i)); }}
               disabled={lightboxIndex === 0}
               className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
             >
@@ -2064,7 +2060,7 @@ function CheckoutPhotoSection({
               <span className="text-sm font-medium">Prev</span>
             </button>
             <button
-              onClick={() => setLightboxIndex((i) => (i !== null && i < photos.length - 1 ? i + 1 : i))}
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i !== null && i < photos.length - 1 ? i + 1 : i)); }}
               disabled={lightboxIndex === photos.length - 1}
               className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
             >
