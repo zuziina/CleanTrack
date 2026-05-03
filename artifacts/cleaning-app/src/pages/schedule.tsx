@@ -73,6 +73,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useMemo, useRef } from "react";
+import ReactDOM from "react-dom";
 import {
   Dialog,
   DialogContent,
@@ -1834,7 +1835,7 @@ function CheckoutPhotoSection({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const deletePhoto = useMutation({
     mutationFn: async (photoId: number) => {
@@ -1979,55 +1980,100 @@ function CheckoutPhotoSection({
           No photos yet. Photograph the main areas of the property.
         </p>
       ) : (
-        <div className="space-y-2">
-          {photos.map((p) => (
-            <div key={p.id} className="flex items-center gap-2.5 bg-white border border-border/60 rounded-lg p-2">
-              <button
-                onClick={() => setLightbox(objectPathToUrl(p.objectPath))}
-                className="shrink-0"
-              >
-                <img
-                  src={objectPathToUrl(p.objectPath)}
-                  alt="Checkout photo"
-                  className="h-14 w-14 object-cover rounded-md border border-border hover:opacity-80 transition-opacity"
-                />
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground">
-                  {new Date(p.uploadedAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-              {p.uploadedByClerkId === myClerkId && (
-                <button
-                  onClick={() => deletePhoto.mutate(p.id)}
-                  disabled={deletePhoto.isPending}
-                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40 shrink-0"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollSnapType: "x mandatory" }}>
+          {photos.map((p, i) => (
+            <button
+              key={p.id}
+              onClick={() => setLightboxIndex(i)}
+              className="shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-emerald-200 bg-emerald-50 hover:opacity-90 active:opacity-75 transition-opacity touch-manipulation"
+              style={{ scrollSnapAlign: "start" }}
+            >
+              <img
+                src={objectPathToUrl(p.objectPath)}
+                alt={`Checkout photo ${i + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </button>
           ))}
         </div>
       )}
 
-      {lightbox && (
+      {lightboxIndex !== null && ReactDOM.createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
+          className="fixed inset-0 bg-black flex flex-col"
+          style={{ zIndex: 99999 }}
+          onClick={() => setLightboxIndex(null)}
         >
-          <img
-            src={lightbox}
-            alt="Checkout photo"
-            className="max-w-full max-h-full object-contain rounded-lg"
-          />
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white bg-black/40 rounded-full p-1.5"
+          {/* top bar */}
+          <div
+            className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+            <span className="text-white/70 text-sm font-medium">
+              {lightboxIndex + 1} / {photos.length}
+            </span>
+            <div className="flex items-center gap-3">
+              {photos[lightboxIndex]?.uploadedByClerkId === myClerkId && (
+                <button
+                  onClick={() => {
+                    const id = photos[lightboxIndex]!.id;
+                    const nextIndex = lightboxIndex > 0 ? lightboxIndex - 1 : photos.length > 1 ? 0 : null;
+                    deletePhoto.mutate(id, {
+                      onSuccess: () => setLightboxIndex(photos.length - 1 === 0 ? null : nextIndex),
+                    });
+                  }}
+                  disabled={deletePhoto.isPending}
+                  className="text-white/70 hover:text-red-400 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                onClick={() => setLightboxIndex(null)}
+                className="text-white/70 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* photo */}
+          <div
+            className="flex-1 flex items-center justify-center px-4 min-h-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={objectPathToUrl(photos[lightboxIndex]!.objectPath)}
+              alt={`Checkout photo ${lightboxIndex + 1}`}
+              className="max-w-full max-h-full object-contain rounded-lg"
+              style={{ maxHeight: "calc(100vh - 120px)" }}
+            />
+          </div>
+
+          {/* bottom nav */}
+          <div
+            className="flex items-center justify-between px-4 pb-8 pt-3 shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))}
+              disabled={lightboxIndex === 0}
+              className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-sm font-medium">Prev</span>
+            </button>
+            <button
+              onClick={() => setLightboxIndex((i) => (i !== null && i < photos.length - 1 ? i + 1 : i))}
+              disabled={lightboxIndex === photos.length - 1}
+              className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
+            >
+              <span className="text-sm font-medium">Next</span>
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
