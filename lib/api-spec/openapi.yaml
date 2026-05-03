@@ -464,6 +464,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/House"
 
+  /assignments/{id}/checkout-photos:
+    get:
+      operationId: listCheckoutPhotos
+      tags: [assignments]
+      summary: List checkout photos for an assignment (boss or assigned employee)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of checkout photos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckoutPhoto"
+    post:
+      operationId: addCheckoutPhoto
+      tags: [assignments]
+      summary: Upload a checkout photo (assigned employee only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCheckoutPhotoBody"
+      responses:
+        "201":
+          description: Created checkout photo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutPhoto"
+
+  /assignments/{id}/checkout-photos/{photoId}:
+    delete:
+      operationId: deleteCheckoutPhoto
+      tags: [assignments]
+      summary: Delete a checkout photo (boss only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /assignments/{id}/checkout-photos/auto-close:
+    post:
+      operationId: autoCloseCheckout
+      tags: [assignments]
+      summary: Set checkoutStatus to auto_closed (boss only, used by 24h cron)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated checkout status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutStatus:
+                    type: string
+                required:
+                  - checkoutStatus
+
   /houses/stats:
     get:
       operationId: getHouseStats
@@ -607,6 +695,14 @@ components:
           nullable: true
         completionNotes:
           type: string
+          nullable: true
+        issuePhotoCount:
+          type: integer
+        checkoutPhotoCount:
+          type: integer
+        checkoutStatus:
+          type: string
+          enum: [pending_checkout, checkout_complete, auto_closed]
           nullable: true
         createdAt:
           type: string
@@ -825,6 +921,40 @@ components:
         status:
           type: string
           enum: [active, inactive]
+
+    CheckoutPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        assignmentId:
+          type: integer
+        companyId:
+          type: integer
+        objectPath:
+          type: string
+        uploadedByClerkId:
+          type: string
+        uploadedAt:
+          type: string
+        expiresAt:
+          type: string
+      required:
+        - id
+        - assignmentId
+        - companyId
+        - objectPath
+        - uploadedByClerkId
+        - uploadedAt
+        - expiresAt
+
+    AddCheckoutPhotoBody:
+      type: object
+      properties:
+        objectPath:
+          type: string
+      required:
+        - objectPath
 
     PatchTimingBody:
       type: object

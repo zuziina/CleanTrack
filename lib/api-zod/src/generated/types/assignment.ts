@@ -5,6 +5,7 @@
  * Cleaning company app API
  * OpenAPI spec version: 0.1.0
  */
+import type { AssignmentCheckoutStatus } from "./assignmentCheckoutStatus";
 import type { AssignmentPriority } from "./assignmentPriority";
 import type { AssignmentStatus } from "./assignmentStatus";
 
@@ -24,5 +25,8 @@ export interface Assignment {
   startedAt?: string | null;
   finishedAt?: string | null;
   completionNotes?: string | null;
+  issuePhotoCount?: number;
+  checkoutPhotoCount?: number;
+  checkoutStatus?: AssignmentCheckoutStatus;
   createdAt: string;
 }

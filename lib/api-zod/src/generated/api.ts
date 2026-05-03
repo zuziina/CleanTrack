@@ -144,6 +144,11 @@ export const ListAssignmentsResponseItem = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem);
@@ -185,6 +190,11 @@ export const GetAssignmentResponse = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 
@@ -222,6 +232,11 @@ export const UpdateAssignmentResponse = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 
@@ -260,6 +275,11 @@ export const PatchAssignmentTimingResponse = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 
@@ -286,6 +306,11 @@ export const StartCleaningResponse = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 
@@ -316,6 +341,11 @@ export const FinishCleaningResponse = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 
@@ -338,6 +368,11 @@ export const GetTodayAssignmentsResponseItem = zod.object({
   startedAt: zod.string().nullish(),
   finishedAt: zod.string().nullish(),
   completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
   createdAt: zod.string(),
 });
 export const GetTodayAssignmentsResponse = zod.array(
@@ -491,6 +526,56 @@ export const UpdateHouseNotesResponse = zod.object({
   entryCode: zod.string().nullish(),
   status: zod.enum(["active", "inactive"]),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary List checkout photos for an assignment (boss or assigned employee)
+ */
+export const ListCheckoutPhotosParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListCheckoutPhotosResponseItem = zod.object({
+  id: zod.number(),
+  assignmentId: zod.number(),
+  companyId: zod.number(),
+  objectPath: zod.string(),
+  uploadedByClerkId: zod.string(),
+  uploadedAt: zod.string(),
+  expiresAt: zod.string(),
+});
+export const ListCheckoutPhotosResponse = zod.array(
+  ListCheckoutPhotosResponseItem,
+);
+
+/**
+ * @summary Upload a checkout photo (assigned employee only)
+ */
+export const AddCheckoutPhotoParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AddCheckoutPhotoBody = zod.object({
+  objectPath: zod.string(),
+});
+
+/**
+ * @summary Delete a checkout photo (boss only)
+ */
+export const DeleteCheckoutPhotoParams = zod.object({
+  id: zod.coerce.number(),
+  photoId: zod.coerce.number(),
+});
+
+/**
+ * @summary Set checkoutStatus to auto_closed (boss only, used by 24h cron)
+ */
+export const AutoCloseCheckoutParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AutoCloseCheckoutResponse = zod.object({
+  checkoutStatus: zod.string(),
 });
 
 /**

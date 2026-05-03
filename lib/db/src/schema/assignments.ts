@@ -19,6 +19,8 @@ export const assignmentsTable = pgTable("assignments", {
   finishedAt: timestamp("finished_at"),
   completionNotes: text("completion_notes"),
   issuePhotoCount: integer("issue_photo_count").default(0).notNull(),
+  checkoutPhotoCount: integer("checkout_photo_count").default(0).notNull(),
+  checkoutStatus: text("checkout_status"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

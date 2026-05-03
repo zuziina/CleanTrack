@@ -6,11 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./addCheckoutPhotoBody";
 export * from "./appUser";
 export * from "./appUserRole";
 export * from "./assignment";
+export * from "./assignmentCheckoutStatus";
 export * from "./assignmentPriority";
 export * from "./assignmentStatus";
+export * from "./autoCloseCheckout200";
+export * from "./checkoutPhoto";
 export * from "./company";
 export * from "./createAssignmentBody";
 export * from "./createAssignmentBodyPriority";

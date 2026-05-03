@@ -40,6 +40,8 @@ function formatRow(
     finishedAt: r.assignments.finishedAt?.toISOString() ?? null,
     completionNotes: r.assignments.completionNotes ?? null,
     issuePhotoCount: r.assignments.issuePhotoCount ?? 0,
+    checkoutPhotoCount: r.assignments.checkoutPhotoCount ?? 0,
+    checkoutStatus: r.assignments.checkoutStatus ?? null,
     createdAt: r.assignments.createdAt.toISOString(),
   };
 }
@@ -271,7 +273,7 @@ router.post("/:id/finish", requireAuthAndCompany, async (req: any, res) => {
       : null;
     const [a] = await db
       .update(assignmentsTable)
-      .set({ finishedAt: new Date(), status: "completed", completionNotes })
+      .set({ finishedAt: new Date(), status: "completed", completionNotes, checkoutStatus: "pending_checkout" })
       .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)))
       .returning();
     if (!a) { res.status(404).json({ error: "Assignment not found" }); return; }

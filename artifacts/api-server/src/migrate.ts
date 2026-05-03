@@ -28,6 +28,24 @@ export async function runMigrations() {
       )
     `);
 
+    await client.query(`
+      ALTER TABLE assignments
+        ADD COLUMN IF NOT EXISTS checkout_photo_count integer NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS checkout_status text
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS assignment_checkout_photos (
+        id serial PRIMARY KEY,
+        assignment_id integer NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+        company_id integer NOT NULL REFERENCES companies(id),
+        uploaded_by_clerk_id text NOT NULL,
+        object_path text NOT NULL,
+        uploaded_at timestamp NOT NULL DEFAULT now(),
+        expires_at timestamp NOT NULL
+      )
+    `);
+
     logger.info("Migrations complete.");
   } finally {
     client.release();

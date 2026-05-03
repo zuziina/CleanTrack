@@ -17,8 +17,11 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddCheckoutPhotoBody,
   AppUser,
   Assignment,
+  AutoCloseCheckout200,
+  CheckoutPhoto,
   Company,
   CreateAssignmentBody,
   CreateCompanyBody,
@@ -2003,6 +2006,349 @@ export const useUpdateHouseNotes = <
   TContext
 > => {
   return useMutation(getUpdateHouseNotesMutationOptions(options));
+};
+
+/**
+ * @summary List checkout photos for an assignment (boss or assigned employee)
+ */
+export const getListCheckoutPhotosUrl = (id: number) => {
+  return `/api/assignments/${id}/checkout-photos`;
+};
+
+export const listCheckoutPhotos = async (
+  id: number,
+  options?: RequestInit,
+): Promise<CheckoutPhoto[]> => {
+  return customFetch<CheckoutPhoto[]>(getListCheckoutPhotosUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCheckoutPhotosQueryKey = (id: number) => {
+  return [`/api/assignments/${id}/checkout-photos`] as const;
+};
+
+export const getListCheckoutPhotosQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCheckoutPhotos>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCheckoutPhotos>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCheckoutPhotosQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listCheckoutPhotos>>
+  > = ({ signal }) => listCheckoutPhotos(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCheckoutPhotos>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListCheckoutPhotosQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCheckoutPhotos>>
+>;
+export type ListCheckoutPhotosQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List checkout photos for an assignment (boss or assigned employee)
+ */
+
+export function useListCheckoutPhotos<
+  TData = Awaited<ReturnType<typeof listCheckoutPhotos>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCheckoutPhotos>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCheckoutPhotosQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Upload a checkout photo (assigned employee only)
+ */
+export const getAddCheckoutPhotoUrl = (id: number) => {
+  return `/api/assignments/${id}/checkout-photos`;
+};
+
+export const addCheckoutPhoto = async (
+  id: number,
+  addCheckoutPhotoBody: AddCheckoutPhotoBody,
+  options?: RequestInit,
+): Promise<CheckoutPhoto> => {
+  return customFetch<CheckoutPhoto>(getAddCheckoutPhotoUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addCheckoutPhotoBody),
+  });
+};
+
+export const getAddCheckoutPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCheckoutPhoto>>,
+    TError,
+    { id: number; data: BodyType<AddCheckoutPhotoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCheckoutPhoto>>,
+  TError,
+  { id: number; data: BodyType<AddCheckoutPhotoBody> },
+  TContext
+> => {
+  const mutationKey = ["addCheckoutPhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCheckoutPhoto>>,
+    { id: number; data: BodyType<AddCheckoutPhotoBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addCheckoutPhoto(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCheckoutPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addCheckoutPhoto>>
+>;
+export type AddCheckoutPhotoMutationBody = BodyType<AddCheckoutPhotoBody>;
+export type AddCheckoutPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Upload a checkout photo (assigned employee only)
+ */
+export const useAddCheckoutPhoto = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCheckoutPhoto>>,
+    TError,
+    { id: number; data: BodyType<AddCheckoutPhotoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addCheckoutPhoto>>,
+  TError,
+  { id: number; data: BodyType<AddCheckoutPhotoBody> },
+  TContext
+> => {
+  return useMutation(getAddCheckoutPhotoMutationOptions(options));
+};
+
+/**
+ * @summary Delete a checkout photo (boss only)
+ */
+export const getDeleteCheckoutPhotoUrl = (id: number, photoId: number) => {
+  return `/api/assignments/${id}/checkout-photos/${photoId}`;
+};
+
+export const deleteCheckoutPhoto = async (
+  id: number,
+  photoId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteCheckoutPhotoUrl(id, photoId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCheckoutPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCheckoutPhoto>>,
+    TError,
+    { id: number; photoId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCheckoutPhoto>>,
+  TError,
+  { id: number; photoId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteCheckoutPhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCheckoutPhoto>>,
+    { id: number; photoId: number }
+  > = (props) => {
+    const { id, photoId } = props ?? {};
+
+    return deleteCheckoutPhoto(id, photoId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCheckoutPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCheckoutPhoto>>
+>;
+
+export type DeleteCheckoutPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a checkout photo (boss only)
+ */
+export const useDeleteCheckoutPhoto = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCheckoutPhoto>>,
+    TError,
+    { id: number; photoId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCheckoutPhoto>>,
+  TError,
+  { id: number; photoId: number },
+  TContext
+> => {
+  return useMutation(getDeleteCheckoutPhotoMutationOptions(options));
+};
+
+/**
+ * @summary Set checkoutStatus to auto_closed (boss only, used by 24h cron)
+ */
+export const getAutoCloseCheckoutUrl = (id: number) => {
+  return `/api/assignments/${id}/checkout-photos/auto-close`;
+};
+
+export const autoCloseCheckout = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AutoCloseCheckout200> => {
+  return customFetch<AutoCloseCheckout200>(getAutoCloseCheckoutUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAutoCloseCheckoutMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof autoCloseCheckout>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof autoCloseCheckout>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["autoCloseCheckout"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof autoCloseCheckout>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return autoCloseCheckout(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AutoCloseCheckoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof autoCloseCheckout>>
+>;
+
+export type AutoCloseCheckoutMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set checkoutStatus to auto_closed (boss only, used by 24h cron)
+ */
+export const useAutoCloseCheckout = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof autoCloseCheckout>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof autoCloseCheckout>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAutoCloseCheckoutMutationOptions(options));
 };
 
 /**

@@ -76,6 +76,16 @@ export const AssignmentPriority = {
   high: "high",
 } as const;
 
+export type AssignmentCheckoutStatus =
+  | (typeof AssignmentCheckoutStatus)[keyof typeof AssignmentCheckoutStatus]
+  | null;
+
+export const AssignmentCheckoutStatus = {
+  pending_checkout: "pending_checkout",
+  checkout_complete: "checkout_complete",
+  auto_closed: "auto_closed",
+} as const;
+
 export interface Assignment {
   id: number;
   houseId: number;
@@ -92,6 +102,9 @@ export interface Assignment {
   startedAt?: string | null;
   finishedAt?: string | null;
   completionNotes?: string | null;
+  issuePhotoCount?: number;
+  checkoutPhotoCount?: number;
+  checkoutStatus?: AssignmentCheckoutStatus;
   createdAt: string;
 }
 
@@ -229,6 +242,20 @@ export interface UpdateHouseBody {
   status?: UpdateHouseBodyStatus;
 }
 
+export interface CheckoutPhoto {
+  id: number;
+  assignmentId: number;
+  companyId: number;
+  objectPath: string;
+  uploadedByClerkId: string;
+  uploadedAt: string;
+  expiresAt: string;
+}
+
+export interface AddCheckoutPhotoBody {
+  objectPath: string;
+}
+
 export interface PatchTimingBody {
   startedAt?: string | null;
   finishedAt?: string | null;
@@ -254,4 +281,8 @@ export type RemoveEmployee200 = {
 
 export type FinishCleaningBody = {
   completionNotes?: string | null;
+};
+
+export type AutoCloseCheckout200 = {
+  checkoutStatus: string;
 };
