@@ -412,6 +412,14 @@ function BossSchedule() {
     return s;
   }, [allAssignments]);
 
+  const datesWithMissingCheckout = useMemo(() => {
+    const s = new Set<string>();
+    (allAssignments ?? []).forEach((a: any) => {
+      if (a.checkoutStatus === "pending_checkout") s.add(a.date);
+    });
+    return s;
+  }, [allAssignments]);
+
   const selectedDateStr = toDateString(selectedDate);
   const selectedAssignments = assignmentsByDate[selectedDateStr] ?? [];
 
@@ -490,6 +498,7 @@ function BossSchedule() {
             const isSelected = ds === selectedDateStr;
             const count = (assignmentsByDate[ds] ?? []).length;
             const hasIssues = datesWithIssues.has(ds);
+            const hasMissingCheckout = datesWithMissingCheckout.has(ds);
             return (
               <button
                 key={ds}
@@ -517,14 +526,14 @@ function BossSchedule() {
                 ) : (
                   <span className="h-4" />
                 )}
-                {hasIssues ? (
-                  <TriangleAlert className={cn(
-                    "h-3 w-3",
-                    isSelected ? "text-white/80" : "text-amber-500"
-                  )} />
-                ) : (
-                  <span className="h-3" />
-                )}
+                <div className="h-3 flex items-center gap-0.5">
+                  {hasIssues && (
+                    <TriangleAlert className={cn("h-3 w-3", isSelected ? "text-white/80" : "text-amber-500")} />
+                  )}
+                  {hasMissingCheckout && (
+                    <Camera className={cn("h-3 w-3", isSelected ? "text-white/60" : "text-emerald-500")} />
+                  )}
+                </div>
               </button>
             );
           })}
@@ -809,20 +818,30 @@ function BossSchedule() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {filteredAssignments.map((a: any) =>
-                a.issuePhotoCount > 0 ? (
+              {filteredAssignments.map((a: any) => {
+                const hasIssuePhotos = a.issuePhotoCount > 0;
+                const hasCheckoutPhotos = a.checkoutPhotoCount > 0;
+                if (!hasIssuePhotos && !hasCheckoutPhotos) {
+                  return <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />;
+                }
+                return (
                   <div key={a.id} className="flex gap-3 items-stretch">
                     <div className="flex-[2] min-w-0">
                       <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
                     </div>
-                    <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
-                      <PhotoStackPanel assignmentId={a.id} />
-                    </div>
+                    {hasIssuePhotos && (
+                      <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
+                        <PhotoStackPanel assignmentId={a.id} />
+                      </div>
+                    )}
+                    {hasCheckoutPhotos && (
+                      <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-emerald-200 overflow-hidden">
+                        <CheckoutStackPanel assignmentId={a.id} />
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
-                )
-              )}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1393,6 +1412,158 @@ function PhotoStackPanel({ assignmentId }: { assignmentId: number }) {
 
           {photos.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">All photos have been deleted.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/* ── Checkout Stack Panel (boss view) ───────────────────────────────── */
+
+function CheckoutStackPanel({ assignmentId }: { assignmentId: number }) {
+  const { data: photos = [], isLoading } = useCheckoutPhotos(assignmentId);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const safeIdx = Math.min(activeIdx, Math.max(0, photos.length - 1));
+  const currentPhoto = photos[safeIdx] ?? null;
+
+  const STACK_ROTATIONS = [-5, 3, -2];
+
+  const handleDownload = async (photo: typeof currentPhoto) => {
+    if (!photo) return;
+    try {
+      const res = await fetch(objectPathToUrl(photo.objectPath));
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = photo.objectPath.split("/").pop() ?? "checkout-photo.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error("Download failed");
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => { setActiveIdx(0); setGalleryOpen(true); }}
+        className="h-full w-full flex flex-col items-center justify-center gap-2.5 px-3 py-4 hover:bg-emerald-50/60 transition-colors"
+        disabled={isLoading || photos.length === 0}
+      >
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+        ) : photos.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No photos</p>
+        ) : (
+          <>
+            <div className="relative" style={{ width: 72, height: 72 }}>
+              {photos.slice(0, 3).map((p, i) => (
+                <img
+                  key={p.id}
+                  src={objectPathToUrl(p.objectPath)}
+                  alt="Checkout photo"
+                  className="absolute inset-0 w-full h-full object-cover rounded-lg border-2 border-white shadow-md"
+                  style={{
+                    transform: `rotate(${STACK_ROTATIONS[i] ?? 0}deg)`,
+                    zIndex: 3 - i,
+                  }}
+                />
+              ))}
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+              {photos.length} {photos.length === 1 ? "photo" : "photos"}
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-none">click to view</span>
+          </>
+        )}
+      </button>
+
+      <Dialog open={galleryOpen} onOpenChange={(o) => { if (!o) setGalleryOpen(false); }}>
+        <DialogContent className="sm:max-w-[560px] bg-[#fafaf9]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-emerald-600" />
+              Checkout Photos
+              {photos.length > 1 && (
+                <span className="text-sm font-normal text-muted-foreground ml-1">
+                  {safeIdx + 1} / {photos.length}
+                </span>
+              )}
+            </DialogTitle>
+            <DialogDescription className="sr-only">Browse checkout photos for this assignment</DialogDescription>
+          </DialogHeader>
+
+          {currentPhoto && (
+            <div className="space-y-3">
+              <div className="relative aspect-video bg-black/90 rounded-xl overflow-hidden">
+                <img
+                  src={objectPathToUrl(currentPhoto.objectPath)}
+                  alt="Checkout photo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {new Date(currentPhoto.uploadedAt).toLocaleDateString([], {
+                  month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline" size="icon"
+                    onClick={() => setActiveIdx(i => Math.max(0, i - 1))}
+                    disabled={safeIdx === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline" size="icon"
+                    onClick={() => setActiveIdx(i => Math.min(photos.length - 1, i + 1))}
+                    disabled={safeIdx === photos.length - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  variant="outline" size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleDownload(currentPhoto)}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+
+              {photos.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 pt-1">
+                  {photos.map((p, i) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setActiveIdx(i)}
+                      className={cn(
+                        "shrink-0 rounded-lg overflow-hidden border-2 transition-all",
+                        safeIdx === i ? "border-emerald-500 opacity-100" : "border-transparent opacity-50 hover:opacity-80"
+                      )}
+                    >
+                      <img src={objectPathToUrl(p.objectPath)} alt="" className="h-14 w-14 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {photos.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No checkout photos.</p>
           )}
         </DialogContent>
       </Dialog>
