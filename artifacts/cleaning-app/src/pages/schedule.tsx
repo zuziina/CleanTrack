@@ -62,6 +62,7 @@ import {
   TriangleAlert,
   ImagePlus,
   Download,
+  Camera,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -114,6 +115,8 @@ const MONTH_NAMES = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
 ];
+
+const CHECKOUT_MIN = 3;
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "Assigned", color: "bg-amber-100 text-amber-800 border-amber-300" },
@@ -1129,6 +1132,12 @@ function AssignmentCard({
                 <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
               </div>
             )}
+            {assignment.checkoutStatus === "pending_checkout" && (
+              <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1">
+                <Camera className="h-3 w-3 shrink-0" />
+                <span className="text-[10px] font-semibold">Checkout photos needed</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center sm:items-end justify-between sm:flex-col gap-2 shrink-0">
@@ -1186,6 +1195,21 @@ function useIssuePhotos(assignmentId: number) {
         id: number; assignmentId: number; objectPath: string;
         description: string | null; uploadedByClerkId: string;
         uploadedAt: string; expiresAt: string;
+      }>>;
+    },
+    staleTime: 30_000,
+  });
+}
+
+function useCheckoutPhotos(assignmentId: number) {
+  return useQuery({
+    queryKey: ["checkout-photos", assignmentId],
+    queryFn: async () => {
+      const res = await fetch(`/api/assignments/${assignmentId}/checkout-photos`);
+      if (!res.ok) throw new Error("Failed to fetch checkout photos");
+      return res.json() as Promise<Array<{
+        id: number; assignmentId: number; objectPath: string;
+        uploadedByClerkId: string; uploadedAt: string; expiresAt: string;
       }>>;
     },
     staleTime: 30_000,
@@ -1623,6 +1647,187 @@ function IssuePhotoSection({
   );
 }
 
+/* ── Checkout Photo Section ──────────────────────────────────────────── */
+
+function CheckoutPhotoSection({
+  assignmentId,
+  onCountUpdated,
+}: {
+  assignmentId: number;
+  onCountUpdated?: (count: number) => void;
+}) {
+  const { data: photos = [], refetch, isLoading } = useCheckoutPhotos(assignmentId);
+  const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const count = photos.length;
+  const reached = count >= CHECKOUT_MIN;
+  const progressPct = Math.min(100, (count / CHECKOUT_MIN) * 100);
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    handleBatchUpload(files);
+  };
+
+  const handleBatchUpload = async (files: File[]) => {
+    setUploading(true);
+    setBatchProgress({ done: 0, total: files.length });
+
+    const uploadOne = async (file: File) => {
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error(`Failed to get upload URL for ${file.name}`);
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error(`Upload failed for ${file.name}`);
+
+      const saveRes = await fetch(`/api/assignments/${assignmentId}/checkout-photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath }),
+      });
+      if (!saveRes.ok) {
+        const errBody = await saveRes.json().catch(() => ({}));
+        throw new Error((errBody as any).error ?? `Failed to save photo for ${file.name}`);
+      }
+      setBatchProgress((p) => ({ ...p, done: p.done + 1 }));
+    };
+
+    try {
+      await Promise.all(files.map(uploadOne));
+      toast.success(`${files.length} ${files.length === 1 ? "photo" : "photos"} uploaded`);
+    } catch (err: any) {
+      toast.error(err.message ?? "Some uploads failed");
+    } finally {
+      const updated = await refetch();
+      const newCount = updated.data?.length ?? 0;
+      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+      onCountUpdated?.(newCount);
+      setUploading(false);
+      setBatchProgress({ done: 0, total: 0 });
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5">
+          <Camera className="h-4 w-4" />
+          Checkout Photos
+          {count > 0 && (
+            <span className="bg-emerald-200 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              {count}
+            </span>
+          )}
+        </h4>
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFilesSelected}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 active:bg-emerald-300 px-3 py-2 rounded-lg transition-colors touch-manipulation disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />{batchProgress.done}/{batchProgress.total}</>
+            ) : (
+              <><ImagePlus className="h-4 w-4" />Add Photos</>
+            )}
+          </button>
+        </>
+      </div>
+
+      <div className="mb-3 space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className={cn("font-medium", reached ? "text-emerald-700" : "text-emerald-600")}>
+            {reached ? "Minimum reached — you can close this job" : `${count} of ${CHECKOUT_MIN} required`}
+          </span>
+          {!reached && (
+            <span className="text-emerald-500/80">{CHECKOUT_MIN - count} more needed</span>
+          )}
+        </div>
+        <div className="h-1.5 bg-emerald-100 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              reached ? "bg-emerald-500" : "bg-emerald-400"
+            )}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        {!reached && (
+          <p className="text-[11px] text-emerald-600/70 leading-snug">
+            Suggested areas: Kitchen · Bathrooms · Bedrooms · Living areas
+          </p>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground text-center py-2">Loading photos…</div>
+      ) : count === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-2">
+          No photos yet. Photograph the main areas of the property.
+        </p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setLightbox(objectPathToUrl(p.objectPath))}
+              className="relative aspect-square rounded-lg overflow-hidden border border-emerald-200 hover:opacity-90 transition-opacity bg-emerald-50"
+            >
+              <img
+                src={objectPathToUrl(p.objectPath)}
+                alt="Checkout photo"
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <img
+            src={lightbox}
+            alt="Checkout photo"
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white bg-black/40 rounded-full p-1.5"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Assign Modal ────────────────────────────────────────────────────── */
 
 function AssignModal({ user, defaultDate, onClose }: { user: any; defaultDate: string; onClose: () => void }) {
@@ -1909,6 +2114,10 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
   const [showFinishNotes, setShowFinishNotes] = useState(false);
   const [completionNotesInput, setCompletionNotesInput] = useState("");
   const issuePhotoRef = useRef<HTMLDivElement>(null);
+  const checkoutPhotoRef = useRef<HTMLDivElement>(null);
+  const [localCheckoutCount, setLocalCheckoutCount] = useState<number>(
+    assignment.checkoutPhotoCount ?? 0
+  );
 
   const elapsed = useLiveElapsed(assignment.startedAt ?? null, assignment.finishedAt ?? null);
 
@@ -1936,6 +2145,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
         setCompletionNotesInput("");
         qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
         qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+        setTimeout(() => checkoutPhotoRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
       },
       onError: () => toast.error("Failed to finish cleaning"),
     });
@@ -2121,6 +2331,30 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                       setAssignment((a: any) => ({ ...a, issuePhotoCount: Math.max(0, (a.issuePhotoCount ?? 0) + delta) }))
                     }
                   />
+                </div>
+              )}
+              {done && (
+                <div ref={checkoutPhotoRef} className="mt-4 pt-4 border-t border-emerald-200/70 bg-emerald-50/40 -mx-6 px-6 pb-2">
+                  <CheckoutPhotoSection
+                    assignmentId={assignment.id}
+                    onCountUpdated={(count) => {
+                      setLocalCheckoutCount(count);
+                      qc.invalidateQueries({ queryKey: getGetTodayAssignmentsQueryKey() });
+                      qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() });
+                    }}
+                  />
+                  {localCheckoutCount >= CHECKOUT_MIN && (
+                    <div className="mt-4 pt-3 border-t border-emerald-200/60">
+                      <Button
+                        size="lg"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm"
+                        onClick={onClose}
+                      >
+                        <CheckCircle2 className="h-5 w-5" />
+                        Close Job
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
