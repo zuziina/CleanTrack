@@ -1980,21 +1980,23 @@ function CheckoutPhotoSection({
           No photos yet. Photograph the main areas of the property.
         </p>
       ) : (
-        <div style={{ width: "100%", height: "72px", display: "flex", flexDirection: "row", flexWrap: "nowrap", overflowX: "auto", overflowY: "hidden", gap: "8px" }}>
-          {photos.map((p, i) => (
-            <button
-              key={p.id}
-              onClick={() => setLightboxIndex(i)}
-              style={{ width: "56px", height: "56px", flexShrink: 0, borderRadius: "8px", overflow: "hidden" }}
-              className="border border-emerald-200 bg-emerald-50 hover:opacity-90 active:opacity-75 transition-opacity touch-manipulation"
-            >
-              <img
-                src={objectPathToUrl(p.objectPath)}
-                alt={`Checkout photo ${i + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </button>
-          ))}
+        <div style={{ width: "100%", overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "row", flexWrap: "nowrap", overflowX: "auto", overflowY: "hidden", width: "100%", paddingBottom: "4px", gap: "8px" }}>
+            {photos.map((p, i) => (
+              <button
+                key={p.id}
+                onClick={() => setLightboxIndex(i)}
+                style={{ width: "56px", height: "56px", flexShrink: 0, borderRadius: "8px", overflow: "hidden" }}
+                className="border border-emerald-200 bg-emerald-50 hover:opacity-90 active:opacity-75 transition-opacity touch-manipulation"
+              >
+                <img
+                  src={objectPathToUrl(p.objectPath)}
+                  alt={`Checkout photo ${i + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
