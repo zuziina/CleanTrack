@@ -1999,76 +1999,81 @@ function CheckoutPhotoSection({
       )}
 
       {lightboxIndex !== null && ReactDOM.createPortal(
-        <div
-          className="fixed inset-0 bg-black flex flex-col"
-          style={{ zIndex: 99999 }}
-          onClick={() => setLightboxIndex(null)}
-        >
-          {/* top bar */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-            <span
-              className="text-white/70 text-sm font-medium"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {lightboxIndex + 1} / {photos.length}
-            </span>
-            <div className="flex items-center gap-3">
-              {photos[lightboxIndex]?.uploadedByClerkId === myClerkId && (
+        <>
+          {/* layer 1 — background, the ONLY element with a close handler */}
+          <div
+            className="fixed inset-0 bg-black"
+            style={{ zIndex: 99999 }}
+            onClick={() => setLightboxIndex(null)}
+          />
+
+          {/* layer 2 — UI controls, sits above background, pointer-events-none at
+              root so gaps between controls fall through to the background close handler */}
+          <div
+            className="fixed inset-0 flex flex-col pointer-events-none"
+            style={{ zIndex: 100000 }}
+          >
+            {/* top bar */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0 pointer-events-auto">
+              <span className="text-white/70 text-sm font-medium">
+                {lightboxIndex + 1} / {photos.length}
+              </span>
+              <div className="flex items-center gap-3">
+                {photos[lightboxIndex]?.uploadedByClerkId === myClerkId && (
+                  <button
+                    onClick={() => {
+                      const id = photos[lightboxIndex]!.id;
+                      const nextIndex = lightboxIndex > 0 ? lightboxIndex - 1 : photos.length > 1 ? 0 : null;
+                      deletePhoto.mutate(id, {
+                        onSuccess: () => setLightboxIndex(photos.length - 1 === 0 ? null : nextIndex),
+                      });
+                    }}
+                    disabled={deletePhoto.isPending}
+                    className="text-white/70 hover:text-red-400 transition-colors disabled:opacity-40"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                )}
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const id = photos[lightboxIndex]!.id;
-                    const nextIndex = lightboxIndex > 0 ? lightboxIndex - 1 : photos.length > 1 ? 0 : null;
-                    deletePhoto.mutate(id, {
-                      onSuccess: () => setLightboxIndex(photos.length - 1 === 0 ? null : nextIndex),
-                    });
-                  }}
-                  disabled={deletePhoto.isPending}
-                  className="text-white/70 hover:text-red-400 transition-colors disabled:opacity-40"
+                  onClick={() => setLightboxIndex(null)}
+                  className="text-white/70 hover:text-white transition-colors"
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <X className="h-6 w-6" />
                 </button>
-              )}
+              </div>
+            </div>
+
+            {/* photo — pointer-events-none so tapping the photo/gap falls through to background */}
+            <div className="flex-1 flex items-center justify-center px-4 min-h-0">
+              <img
+                src={objectPathToUrl(photos[lightboxIndex]!.objectPath)}
+                alt={`Checkout photo ${lightboxIndex + 1}`}
+                className="max-w-full max-h-full object-contain rounded-lg"
+                style={{ maxHeight: "calc(100vh - 120px)" }}
+              />
+            </div>
+
+            {/* bottom nav */}
+            <div className="flex items-center justify-between px-4 pb-8 pt-3 shrink-0 pointer-events-auto">
               <button
-                onClick={(e) => { e.stopPropagation(); setLightboxIndex(null); }}
-                className="text-white/70 hover:text-white transition-colors"
+                onClick={() => setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i))}
+                disabled={lightboxIndex === 0}
+                className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
               >
-                <X className="h-6 w-6" />
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-sm font-medium">Prev</span>
+              </button>
+              <button
+                onClick={() => setLightboxIndex((i) => (i !== null && i < photos.length - 1 ? i + 1 : i))}
+                disabled={lightboxIndex === photos.length - 1}
+                className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
+              >
+                <span className="text-sm font-medium">Next</span>
+                <ChevronRight className="h-5 w-5" />
               </button>
             </div>
           </div>
-
-          {/* photo — stop propagation so tapping the image doesn't close */}
-          <div className="flex-1 flex items-center justify-center px-4 min-h-0">
-            <img
-              src={objectPathToUrl(photos[lightboxIndex]!.objectPath)}
-              alt={`Checkout photo ${lightboxIndex + 1}`}
-              className="max-w-full max-h-full object-contain rounded-lg"
-              style={{ maxHeight: "calc(100vh - 120px)" }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-
-          {/* bottom nav */}
-          <div className="flex items-center justify-between px-4 pb-8 pt-3 shrink-0">
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : i)); }}
-              disabled={lightboxIndex === 0}
-              className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span className="text-sm font-medium">Prev</span>
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i !== null && i < photos.length - 1 ? i + 1 : i)); }}
-              disabled={lightboxIndex === photos.length - 1}
-              className="flex items-center gap-1.5 text-white bg-white/15 hover:bg-white/25 active:bg-white/35 px-4 py-2.5 rounded-full transition-colors disabled:opacity-25 touch-manipulation"
-            >
-              <span className="text-sm font-medium">Next</span>
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        </div>,
+        </>,
         document.body
       )}
     </div>
@@ -2434,7 +2439,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[580px] p-0 bg-[#fafaf9] max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[580px] p-0 bg-[#fafaf9] max-h-[90dvh] overflow-y-auto overflow-x-hidden">
         {isLoading || !house ? (
           <div className="p-6 space-y-4">
             <DialogHeader>
