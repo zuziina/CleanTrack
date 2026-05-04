@@ -1914,7 +1914,7 @@ function CheckoutPhotoSection({
   };
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-emerald-800 flex items-center gap-1.5">
           <Camera className="h-4 w-4" />
@@ -1980,7 +1980,7 @@ function CheckoutPhotoSection({
           No photos yet. Photograph the main areas of the property.
         </p>
       ) : (
-        <div className="w-full min-w-0 flex gap-2 overflow-x-auto pb-1" style={{ scrollSnapType: "x mandatory" }}>
+        <div style={{ display: "flex", flexWrap: "nowrap", gap: "0.5rem", overflowX: "auto", overflowY: "hidden", maxWidth: "100%", paddingBottom: "4px", scrollSnapType: "x mandatory" }}>
           {photos.map((p, i) => (
             <button
               key={p.id}
@@ -2586,7 +2586,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
                 </div>
               )}
               {done && (
-                <div ref={checkoutPhotoRef} className="mt-4 pt-4 border-t border-emerald-200/70 bg-emerald-50/40 -mx-6 px-6 pb-2">
+                <div ref={checkoutPhotoRef} className="mt-4 pt-4 border-t border-emerald-200/70 bg-emerald-50/40 -mx-6 px-6 pb-2 overflow-x-hidden">
                   <CheckoutPhotoSection
                     assignmentId={assignment.id}
                     myClerkId={assignment.assignedToClerkId ?? undefined}
