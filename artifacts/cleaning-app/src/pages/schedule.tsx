@@ -2480,7 +2480,7 @@ function AssignmentDetailModal({ assignment: initialAssignment, onClose }: { ass
             </div>
 
             {/* Cleaning Tracker */}
-            <div className={cn("px-6 py-5 border-b border-border", done ? "bg-emerald-50" : inProgress ? "bg-amber-50" : "bg-white")}>
+            <div className={cn("px-6 py-5 border-b border-border overflow-x-hidden", done ? "bg-emerald-50" : inProgress ? "bg-amber-50" : "bg-white")}>
               {notStarted && (
                 <div className="flex flex-col items-center gap-3 py-2">
                   <p className="text-sm text-muted-foreground">Tap the button when you begin cleaning</p>
