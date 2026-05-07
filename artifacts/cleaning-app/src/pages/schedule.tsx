@@ -916,25 +916,25 @@ function BossSchedule() {
                                 <ChevronDown className="h-3.5 w-3.5" />
                               </Button>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              {hasIssuePhotos || hasCheckoutPhotos ? (
-                                <div className="flex gap-3 items-stretch">
-                                  <div className="flex-[2] min-w-0">
-                                    <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
-                                  </div>
-                                  {hasIssuePhotos && (
+                            <div className="flex-1 min-w-0 flex gap-2 items-stretch">
+                              <div className="flex-1 min-w-0">
+                                {hasIssuePhotos ? (
+                                  <div className="flex gap-3 items-stretch">
+                                    <div className="flex-[2] min-w-0">
+                                      <AssignmentCard assignment={a} bossView onEdit={() => setEditTarget(a)} />
+                                    </div>
                                     <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
                                       <PhotoStackPanel assignmentId={a.id} />
                                     </div>
-                                  )}
-                                  {hasCheckoutPhotos && (
-                                    <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-emerald-200 overflow-hidden">
-                                      <CheckoutStackPanel assignmentId={a.id} />
-                                    </div>
-                                  )}
+                                  </div>
+                                ) : (
+                                  <AssignmentCard assignment={a} bossView onEdit={() => setEditTarget(a)} />
+                                )}
+                              </div>
+                              {hasCheckoutPhotos && (
+                                <div className="shrink-0 self-center">
+                                  <CheckoutThumbnail assignmentId={a.id} />
                                 </div>
-                              ) : (
-                                <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
                               )}
                             </div>
                           </div>
@@ -1163,11 +1163,13 @@ function EmployeeSchedule() {
 function AssignmentCard({
   assignment,
   showAssignee = false,
+  bossView = false,
   onEdit,
   onClick,
 }: {
   assignment: any;
   showAssignee?: boolean;
+  bossView?: boolean;
   onEdit?: () => void;
   onClick?: () => void;
 }) {
@@ -1190,14 +1192,22 @@ function AssignmentCard({
               : "bg-amber-500"
           )}
         />
-        <CardContent className="p-4 flex-1 flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="space-y-2 flex-1">
+        <CardContent className={cn("flex-1 flex flex-col sm:flex-row gap-3 justify-between", bossView ? "p-3" : "p-4 gap-4")}>
+          <div className={cn("flex-1 min-w-0", bossView ? "space-y-1.5" : "space-y-2")}>
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-semibold text-base leading-tight">{assignment.houseName}</h3>
+              <div className="min-w-0 flex-1">
+                <h3 className={cn(
+                  "leading-tight truncate",
+                  bossView ? "font-bold text-lg" : "font-semibold text-base"
+                )}>
+                  {assignment.houseName}
+                </h3>
                 {assignment.timeSlot && (
-                  <div className="flex items-center text-muted-foreground text-sm gap-1 mt-1">
-                    <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                  <div className={cn(
+                    "flex items-center gap-1 mt-0.5",
+                    bossView ? "text-muted-foreground/70 text-xs" : "text-muted-foreground text-sm mt-1"
+                  )}>
+                    <Clock className={bossView ? "h-3 w-3 flex-shrink-0" : "h-3.5 w-3.5 flex-shrink-0"} />
                     <span className="truncate">{assignment.timeSlot}</span>
                   </div>
                 )}
@@ -1221,33 +1231,39 @@ function AssignmentCard({
               </div>
             </div>
 
-            {showAssignee && assignment.assignedToUsername && (
+            {showAssignee && !bossView && assignment.assignedToUsername && (
               <div className="text-xs font-medium text-primary bg-primary/5 inline-flex items-center px-2 py-0.5 rounded-sm">
                 {assignment.assignedToUsername}
               </div>
             )}
 
             {(assignment.guestCount > 0 || assignment.notes) && (
-              <div className="text-sm bg-secondary/50 p-2 rounded-md space-y-1">
+              <div className={cn(
+                "rounded-md space-y-1",
+                bossView ? "bg-secondary/30 px-2 py-1.5" : "text-sm bg-secondary/50 p-2"
+              )}>
                 {assignment.guestCount > 0 && (
-                  <div className="flex items-center gap-1.5 text-foreground/80 font-medium">
-                    <Users className="h-3.5 w-3.5" />
+                  <div className={cn(
+                    "flex items-center gap-1.5",
+                    bossView ? "text-muted-foreground text-xs" : "text-foreground/80 font-medium"
+                  )}>
+                    <Users className={bossView ? "h-3 w-3" : "h-3.5 w-3.5"} />
                     {assignment.guestCount} guests
                   </div>
                 )}
                 {assignment.notes && (
-                  <p className="text-muted-foreground text-xs">{assignment.notes}</p>
+                  <p className={cn("text-muted-foreground", bossView ? "text-[11px]" : "text-xs")}>{assignment.notes}</p>
                 )}
               </div>
             )}
 
-            {showAssignee && assignment.completionNotes && (
+            {(bossView || showAssignee) && assignment.completionNotes && (
               <div className="rounded-md bg-emerald-50 border border-emerald-200 px-2.5 py-2 space-y-0.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Completion Notes</p>
                 <p className="text-xs text-foreground/80">{assignment.completionNotes}</p>
               </div>
             )}
-            {showAssignee && assignment.issuePhotoCount > 0 && (
+            {(bossView || showAssignee) && assignment.issuePhotoCount > 0 && (
               <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
                 <TriangleAlert className="h-3 w-3 shrink-0" />
                 <span className="text-[10px] font-semibold">{assignment.issuePhotoCount} issue {assignment.issuePhotoCount === 1 ? "photo" : "photos"}</span>
@@ -1664,6 +1680,120 @@ function CheckoutStackPanel({ assignmentId }: { assignmentId: number }) {
             </div>
           )}
 
+          {photos.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No checkout photos.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/* ── Checkout Thumbnail (boss view compact) ─────────────────────────── */
+
+function CheckoutThumbnail({ assignmentId }: { assignmentId: number }) {
+  const { data: photos = [], isLoading } = useCheckoutPhotos(assignmentId);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const safeIdx = Math.min(activeIdx, Math.max(0, photos.length - 1));
+  const currentPhoto = photos[safeIdx] ?? null;
+
+  const handleDownload = async (photo: typeof currentPhoto) => {
+    if (!photo) return;
+    try {
+      const res = await fetch(objectPathToUrl(photo.objectPath));
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = photo.objectPath.split("/").pop() ?? "checkout-photo.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error("Download failed");
+    }
+  };
+
+  if (isLoading) return <div className="w-14 h-14 rounded-lg bg-secondary/50 animate-pulse shrink-0" />;
+  if (photos.length === 0) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => { setActiveIdx(0); setGalleryOpen(true); }}
+        className="relative shrink-0 rounded-lg overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-colors shadow-sm"
+        style={{ width: 56, height: 56 }}
+        title={`${photos.length} checkout ${photos.length === 1 ? "photo" : "photos"}`}
+      >
+        <img
+          src={objectPathToUrl(photos[0].objectPath)}
+          alt="Checkout photo"
+          className="w-full h-full object-cover"
+        />
+        {photos.length > 1 && (
+          <span className="absolute bottom-0.5 right-0.5 bg-black/65 text-white text-[9px] font-bold rounded px-1 leading-[14px]">
+            {photos.length}
+          </span>
+        )}
+      </button>
+
+      <Dialog open={galleryOpen} onOpenChange={(o) => { if (!o) setGalleryOpen(false); }}>
+        <DialogContent className="sm:max-w-[560px] bg-[#fafaf9]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-emerald-600" />
+              Checkout Photos
+              {photos.length > 1 && (
+                <span className="text-sm font-normal text-muted-foreground ml-1">
+                  {safeIdx + 1} / {photos.length}
+                </span>
+              )}
+            </DialogTitle>
+            <DialogDescription className="sr-only">Browse checkout photos for this assignment</DialogDescription>
+          </DialogHeader>
+          {currentPhoto && (
+            <div className="space-y-3">
+              <div className="relative aspect-video bg-black/90 rounded-xl overflow-hidden">
+                <img src={objectPathToUrl(currentPhoto.objectPath)} alt="Checkout photo" className="w-full h-full object-contain" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {new Date(currentPhoto.uploadedAt).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </p>
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setActiveIdx(i => Math.max(0, i - 1))} disabled={safeIdx === 0}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => setActiveIdx(i => Math.min(photos.length - 1, i + 1))} disabled={safeIdx === photos.length - 1}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleDownload(currentPhoto)}>
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+              {photos.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 pt-1">
+                  {photos.map((p, i) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setActiveIdx(i)}
+                      className={cn(
+                        "shrink-0 rounded-lg overflow-hidden border-2 transition-all",
+                        safeIdx === i ? "border-emerald-500 opacity-100" : "border-transparent opacity-50 hover:opacity-80"
+                      )}
+                    >
+                      <img src={objectPathToUrl(p.objectPath)} alt="" className="h-14 w-14 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {photos.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">No checkout photos.</p>
           )}
