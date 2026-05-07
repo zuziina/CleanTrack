@@ -15,6 +15,7 @@ import {
   usePatchAssignmentTiming,
   usePatchUser,
   useRemoveEmployee,
+  useReorderAssignment,
   getGetHouseQueryKey,
   getGetTodayAssignmentsQueryKey,
   getListAssignmentsQueryKey,
@@ -34,6 +35,8 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Plus,
   UserCheck,
   Pencil,
@@ -352,6 +355,7 @@ function BossSchedule() {
   const { data: allAssignments, isLoading: assignmentsLoading } = useListAssignments();
   const patchUser = usePatchUser();
   const removeEmployee = useRemoveEmployee();
+  const reorderAssignment = useReorderAssignment();
   const qc = useQueryClient();
 
   const allEmployees = useMemo(
@@ -446,6 +450,34 @@ function BossSchedule() {
   }, [selectedAssignments, filterEmployee, filterStatus, filterHouse]);
 
   const hasActiveFilter = filterEmployee !== null || filterStatus !== null || filterHouse !== null;
+
+  const assignmentsByEmployee = useMemo(() => {
+    const map = new Map<string | null, any[]>();
+    filteredAssignments.forEach((a: any) => {
+      const key = a.assignedToClerkId ?? null;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
+    });
+    const groups: { clerkId: string | null; name: string; assignments: any[] }[] = [];
+    allEmployees.forEach((emp: any) => {
+      if (map.has(emp.clerkId)) {
+        groups.push({
+          clerkId: emp.clerkId,
+          name: emp.username || emp.firstName || "Unknown",
+          assignments: map.get(emp.clerkId)!,
+        });
+      }
+    });
+    map.forEach((assignments, clerkId) => {
+      if (clerkId !== null && !allEmployees.find((e: any) => e.clerkId === clerkId)) {
+        groups.push({ clerkId, name: assignments[0]?.assignedToUsername ?? "Unknown", assignments });
+      }
+    });
+    if (map.has(null)) {
+      groups.push({ clerkId: null, name: "Unassigned", assignments: map.get(null)! });
+    }
+    return groups;
+  }, [filteredAssignments, allEmployees]);
 
   const formattedSelected = selectedDate.toLocaleDateString("en-US", {
     weekday: "long",
@@ -818,28 +850,97 @@ function BossSchedule() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {filteredAssignments.map((a: any) => {
-                const hasIssuePhotos = a.issuePhotoCount > 0;
-                const hasCheckoutPhotos = a.checkoutPhotoCount > 0;
-                if (!hasIssuePhotos && !hasCheckoutPhotos) {
-                  return <AssignmentCard key={a.id} assignment={a} showAssignee onEdit={() => setEditTarget(a)} />;
-                }
+            <div className="space-y-5">
+              {assignmentsByEmployee.map(({ clerkId, name, assignments: empAssignments }) => {
+                const fullEmpAssignments = selectedAssignments.filter(
+                  (a: any) => a.assignedToClerkId === clerkId
+                );
+                const initials = name.charAt(0).toUpperCase();
                 return (
-                  <div key={a.id} className="flex gap-3 items-stretch">
-                    <div className="flex-[2] min-w-0">
-                      <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
+                  <div key={clerkId ?? "unassigned"}>
+                    <div className="flex items-center gap-2 mb-2 px-0.5">
+                      <Avatar className="h-6 w-6 shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary uppercase text-[10px] font-bold">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs font-semibold text-foreground">{name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {empAssignments.length} job{empAssignments.length !== 1 ? "s" : ""}
+                      </span>
                     </div>
-                    {hasIssuePhotos && (
-                      <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
-                        <PhotoStackPanel assignmentId={a.id} />
-                      </div>
-                    )}
-                    {hasCheckoutPhotos && (
-                      <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-emerald-200 overflow-hidden">
-                        <CheckoutStackPanel assignmentId={a.id} />
-                      </div>
-                    )}
+                    <div className="space-y-2 pl-3 border-l-2 border-border/30 ml-3">
+                      {empAssignments.map((a: any, filteredIdx: number) => {
+                        const fullIdx = fullEmpAssignments.findIndex((fa: any) => fa.id === a.id);
+                        const fullPos = fullIdx + 1;
+                        const isFirst = filteredIdx === 0;
+                        const isLast = filteredIdx === empAssignments.length - 1;
+                        const hasIssuePhotos = a.issuePhotoCount > 0;
+                        const hasCheckoutPhotos = a.checkoutPhotoCount > 0;
+                        const isPending = reorderAssignment.isPending;
+                        return (
+                          <div key={a.id} className="flex items-center gap-1.5">
+                            <div className="flex flex-col items-center shrink-0 self-start mt-2">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-secondary/80 disabled:opacity-25"
+                                disabled={isFirst || isPending}
+                                onClick={() =>
+                                  reorderAssignment.mutate(
+                                    { id: a.id, data: { newPosition: fullPos - 1 } },
+                                    {
+                                      onSuccess: () => qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() }),
+                                      onError: () => toast.error("Failed to reorder"),
+                                    }
+                                  )
+                                }
+                              >
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-secondary/80 disabled:opacity-25"
+                                disabled={isLast || isPending}
+                                onClick={() =>
+                                  reorderAssignment.mutate(
+                                    { id: a.id, data: { newPosition: fullPos + 1 } },
+                                    {
+                                      onSuccess: () => qc.invalidateQueries({ queryKey: getListAssignmentsQueryKey() }),
+                                      onError: () => toast.error("Failed to reorder"),
+                                    }
+                                  )
+                                }
+                              >
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {hasIssuePhotos || hasCheckoutPhotos ? (
+                                <div className="flex gap-3 items-stretch">
+                                  <div className="flex-[2] min-w-0">
+                                    <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
+                                  </div>
+                                  {hasIssuePhotos && (
+                                    <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-amber-200 overflow-hidden">
+                                      <PhotoStackPanel assignmentId={a.id} />
+                                    </div>
+                                  )}
+                                  {hasCheckoutPhotos && (
+                                    <div className="flex-[1] min-w-0 bg-[#fafaf9] rounded-xl border border-emerald-200 overflow-hidden">
+                                      <CheckoutStackPanel assignmentId={a.id} />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <AssignmentCard assignment={a} showAssignee onEdit={() => setEditTarget(a)} />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
