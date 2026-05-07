@@ -1254,9 +1254,9 @@ function AssignmentCard({
               </div>
             )}
             {assignment.checkoutStatus === "pending_checkout" && (
-              <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1">
-                <Camera className="h-3 w-3 shrink-0" />
-                <span className="text-[10px] font-semibold">Checkout photos needed</span>
+              <div className="flex items-center gap-1.5 rounded-md px-2 py-1 border" style={{ background: "#fef2f2", color: "#991b1b", borderColor: "#fca5a5" }}>
+                <TriangleAlert className="h-3 w-3 shrink-0" />
+                <span className="text-[10px] font-semibold">Photos missing</span>
               </div>
             )}
           </div>
