@@ -7,7 +7,7 @@ import {
   UpdateAssignmentParams,
   DeleteAssignmentParams,
 } from "@workspace/api-zod";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, max } from "drizzle-orm";
 import { requireAuthAndCompany, batchUsernames } from "../lib/auth";
 
 const router = Router();
@@ -127,11 +127,30 @@ router.post("/", requireAuthAndCompany, async (req: any, res) => {
     }
     const _now2 = new Date();
     const today = `${_now2.getFullYear()}-${String(_now2.getMonth() + 1).padStart(2, "0")}-${String(_now2.getDate()).padStart(2, "0")}`;
+    const assignmentDate = parsed.data.date ?? today;
+    const assignedTo = parsed.data.assignedToClerkId ?? null;
+
+    const [maxRow] = await db
+      .select({ maxSort: max(assignmentsTable.sortOrder) })
+      .from(assignmentsTable)
+      .where(
+        and(
+          eq(assignmentsTable.companyId, req.companyId),
+          eq(assignmentsTable.date, assignmentDate),
+          assignedTo !== null
+            ? eq(assignmentsTable.assignedToClerkId, assignedTo)
+            : eq(assignmentsTable.assignedToClerkId, assignmentsTable.assignedToClerkId)
+        )
+      );
+
+    const nextSortOrder = (maxRow?.maxSort ?? 0) + 1;
+
     const values = {
       ...parsed.data,
-      date: parsed.data.date ?? today,
+      date: assignmentDate,
       timeSlot: parsed.data.timeSlot ?? "",
       companyId: req.companyId,
+      sortOrder: nextSortOrder,
     };
     const [a] = await db.insert(assignmentsTable).values(values).returning();
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, a.houseId));
