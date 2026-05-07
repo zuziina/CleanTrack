@@ -31,6 +31,7 @@ export * from "./joinCompanyBody";
 export * from "./patchTimingBody";
 export * from "./patchUserBody";
 export * from "./removeEmployee200";
+export * from "./reorderAssignmentBody";
 export * from "./setRoleBody";
 export * from "./setRoleBodyRole";
 export * from "./updateAssignmentBody";

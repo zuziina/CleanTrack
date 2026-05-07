@@ -264,6 +264,31 @@ paths:
         "204":
           description: Deleted
 
+  /assignments/{id}/sort-order:
+    patch:
+      operationId: reorderAssignment
+      tags: [assignments]
+      summary: Set the sort order of an assignment within its employee's day (boss only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderAssignmentBody"
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assignment"
+
   /assignments/{id}/timing:
     patch:
       operationId: patchAssignmentTiming
@@ -704,6 +729,8 @@ components:
           type: string
           enum: [pending_checkout, checkout_complete, auto_closed]
           nullable: true
+        sortOrder:
+          type: integer
         createdAt:
           type: string
       required:
@@ -715,7 +742,17 @@ components:
         - timeSlot
         - status
         - priority
+        - sortOrder
         - createdAt
+
+    ReorderAssignmentBody:
+      type: object
+      properties:
+        newPosition:
+          type: integer
+          description: 1-based position within the employee's assignments for that day
+      required:
+        - newPosition
 
     CreateAssignmentBody:
       type: object

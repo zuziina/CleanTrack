@@ -7,7 +7,7 @@ import {
   UpdateAssignmentParams,
   DeleteAssignmentParams,
 } from "@workspace/api-zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { requireAuthAndCompany, batchUsernames } from "../lib/auth";
 
 const router = Router();
@@ -42,6 +42,7 @@ function formatRow(
     issuePhotoCount: r.assignments.issuePhotoCount ?? 0,
     checkoutPhotoCount: r.assignments.checkoutPhotoCount ?? 0,
     checkoutStatus: r.assignments.checkoutStatus ?? null,
+    sortOrder: r.assignments.sortOrder,
     createdAt: r.assignments.createdAt.toISOString(),
   };
 }
@@ -57,7 +58,7 @@ router.get("/today", requireAuthAndCompany, async (req: any, res) => {
         .from(assignmentsTable)
         .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
         .where(and(eq(assignmentsTable.date, today), eq(assignmentsTable.companyId, req.companyId)))
-        .orderBy(assignmentsTable.timeSlot);
+        .orderBy(asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
     } else {
       rows = await db
         .select()
@@ -68,7 +69,7 @@ router.get("/today", requireAuthAndCompany, async (req: any, res) => {
           eq(assignmentsTable.assignedToClerkId, req.clerkUserId),
           eq(assignmentsTable.companyId, req.companyId),
         ))
-        .orderBy(assignmentsTable.timeSlot);
+        .orderBy(asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
     }
     const clerkIds = rows
       .map((r) => r.assignments.assignedToClerkId)
@@ -90,7 +91,7 @@ router.get("/", requireAuthAndCompany, async (req: any, res) => {
         .from(assignmentsTable)
         .innerJoin(housesTable, eq(assignmentsTable.houseId, housesTable.id))
         .where(eq(assignmentsTable.companyId, req.companyId))
-        .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
+        .orderBy(asc(assignmentsTable.date), asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
     } else {
       rows = await db
         .select()
@@ -100,7 +101,7 @@ router.get("/", requireAuthAndCompany, async (req: any, res) => {
           eq(assignmentsTable.assignedToClerkId, req.clerkUserId),
           eq(assignmentsTable.companyId, req.companyId),
         ))
-        .orderBy(assignmentsTable.date, assignmentsTable.timeSlot);
+        .orderBy(asc(assignmentsTable.date), asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
     }
     const clerkIds = rows
       .map((r) => r.assignments.assignedToClerkId)
@@ -205,6 +206,56 @@ router.put("/:id", requireAuthAndCompany, async (req: any, res) => {
     res.json(formatRow({ assignments: a, houses: house }, usernameMap));
   } catch (err) {
     req.log.error({ err }, "Failed to update assignment");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/:id/sort-order", requireAuthAndCompany, async (req: any, res) => {
+  try {
+    if (req.userRole !== "boss") {
+      res.status(403).json({ error: "Only bosses can reorder assignments" });
+      return;
+    }
+    const id = Number(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const { newPosition } = req.body as { newPosition?: unknown };
+    if (typeof newPosition !== "number" || !Number.isInteger(newPosition) || newPosition < 1) {
+      res.status(400).json({ error: "newPosition must be a positive integer" });
+      return;
+    }
+    const [target] = await db
+      .select()
+      .from(assignmentsTable)
+      .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)));
+    if (!target) { res.status(404).json({ error: "Assignment not found" }); return; }
+    const siblings = await db
+      .select()
+      .from(assignmentsTable)
+      .where(and(
+        eq(assignmentsTable.companyId, req.companyId),
+        eq(assignmentsTable.date, target.date),
+        eq(assignmentsTable.assignedToClerkId, target.assignedToClerkId ?? ""),
+      ))
+      .orderBy(asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
+    const others = siblings.filter((s) => s.id !== id);
+    const clampedPos = Math.min(newPosition - 1, others.length);
+    const reordered = [...others.slice(0, clampedPos), target, ...others.slice(clampedPos)];
+    await Promise.all(
+      reordered.map((a, idx) =>
+        db.update(assignmentsTable).set({ sortOrder: idx + 1 }).where(eq(assignmentsTable.id, a.id))
+      )
+    );
+    const [updated] = await db
+      .select()
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.id, id));
+    const [house] = await db.select().from(housesTable).where(eq(housesTable.id, updated.houseId));
+    if (!house) { res.status(404).json({ error: "House not found" }); return; }
+    const clerkIds = updated.assignedToClerkId ? [updated.assignedToClerkId] : [];
+    const usernameMap = await batchUsernames(clerkIds);
+    res.json(formatRow({ assignments: updated, houses: house }, usernameMap));
+  } catch (err) {
+    req.log.error({ err }, "Failed to reorder assignment");
     res.status(500).json({ error: "Internal server error" });
   }
 });

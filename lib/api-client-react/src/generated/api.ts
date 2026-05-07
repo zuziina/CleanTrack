@@ -34,6 +34,7 @@ import type {
   PatchTimingBody,
   PatchUserBody,
   RemoveEmployee200,
+  ReorderAssignmentBody,
   SetRoleBody,
   UpdateAssignmentBody,
   UpdateHouseBody,
@@ -1171,6 +1172,93 @@ export const useDeleteAssignment = <
   TContext
 > => {
   return useMutation(getDeleteAssignmentMutationOptions(options));
+};
+
+/**
+ * @summary Set the sort order of an assignment within its employee's day (boss only)
+ */
+export const getReorderAssignmentUrl = (id: number) => {
+  return `/api/assignments/${id}/sort-order`;
+};
+
+export const reorderAssignment = async (
+  id: number,
+  reorderAssignmentBody: ReorderAssignmentBody,
+  options?: RequestInit,
+): Promise<Assignment> => {
+  return customFetch<Assignment>(getReorderAssignmentUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(reorderAssignmentBody),
+  });
+};
+
+export const getReorderAssignmentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderAssignment>>,
+    TError,
+    { id: number; data: BodyType<ReorderAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reorderAssignment>>,
+  TError,
+  { id: number; data: BodyType<ReorderAssignmentBody> },
+  TContext
+> => {
+  const mutationKey = ["reorderAssignment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reorderAssignment>>,
+    { id: number; data: BodyType<ReorderAssignmentBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return reorderAssignment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReorderAssignmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reorderAssignment>>
+>;
+export type ReorderAssignmentMutationBody = BodyType<ReorderAssignmentBody>;
+export type ReorderAssignmentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set the sort order of an assignment within its employee's day (boss only)
+ */
+export const useReorderAssignment = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderAssignment>>,
+    TError,
+    { id: number; data: BodyType<ReorderAssignmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof reorderAssignment>>,
+  TError,
+  { id: number; data: BodyType<ReorderAssignmentBody> },
+  TContext
+> => {
+  return useMutation(getReorderAssignmentMutationOptions(options));
 };
 
 /**

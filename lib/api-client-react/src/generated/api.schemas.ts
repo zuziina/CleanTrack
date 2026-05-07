@@ -105,7 +105,13 @@ export interface Assignment {
   issuePhotoCount?: number;
   checkoutPhotoCount?: number;
   checkoutStatus?: AssignmentCheckoutStatus;
+  sortOrder: number;
   createdAt: string;
+}
+
+export interface ReorderAssignmentBody {
+  /** 1-based position within the employee's assignments for that day */
+  newPosition: number;
 }
 
 export type CreateAssignmentBodyStatus =

@@ -21,6 +21,7 @@ export const assignmentsTable = pgTable("assignments", {
   issuePhotoCount: integer("issue_photo_count").default(0).notNull(),
   checkoutPhotoCount: integer("checkout_photo_count").default(0).notNull(),
   checkoutStatus: text("checkout_status"),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

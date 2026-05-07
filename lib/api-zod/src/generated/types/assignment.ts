@@ -28,5 +28,6 @@ export interface Assignment {
   issuePhotoCount?: number;
   checkoutPhotoCount?: number;
   checkoutStatus?: AssignmentCheckoutStatus;
+  sortOrder: number;
   createdAt: string;
 }

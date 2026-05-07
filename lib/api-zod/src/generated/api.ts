@@ -149,6 +149,7 @@ export const ListAssignmentsResponseItem = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 export const ListAssignmentsResponse = zod.array(ListAssignmentsResponseItem);
@@ -195,6 +196,7 @@ export const GetAssignmentResponse = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 
@@ -237,6 +239,7 @@ export const UpdateAssignmentResponse = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 
@@ -245,6 +248,46 @@ export const UpdateAssignmentResponse = zod.object({
  */
 export const DeleteAssignmentParams = zod.object({
   id: zod.coerce.number(),
+});
+
+/**
+ * @summary Set the sort order of an assignment within its employee's day (boss only)
+ */
+export const ReorderAssignmentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ReorderAssignmentBody = zod.object({
+  newPosition: zod
+    .number()
+    .describe(
+      "1-based position within the employee's assignments for that day",
+    ),
+});
+
+export const ReorderAssignmentResponse = zod.object({
+  id: zod.number(),
+  houseId: zod.number(),
+  houseName: zod.string(),
+  houseAddress: zod.string(),
+  assignedToClerkId: zod.string().nullish(),
+  assignedToUsername: zod.string().nullish(),
+  date: zod.string(),
+  timeSlot: zod.string(),
+  notes: zod.string().nullish(),
+  guestCount: zod.number().nullish(),
+  status: zod.enum(["pending", "in_progress", "completed"]),
+  priority: zod.enum(["low", "normal", "high"]),
+  startedAt: zod.string().nullish(),
+  finishedAt: zod.string().nullish(),
+  completionNotes: zod.string().nullish(),
+  issuePhotoCount: zod.number().optional(),
+  checkoutPhotoCount: zod.number().optional(),
+  checkoutStatus: zod
+    .enum(["pending_checkout", "checkout_complete", "auto_closed"])
+    .nullish(),
+  sortOrder: zod.number(),
+  createdAt: zod.string(),
 });
 
 /**
@@ -280,6 +323,7 @@ export const PatchAssignmentTimingResponse = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 
@@ -311,6 +355,7 @@ export const StartCleaningResponse = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 
@@ -346,6 +391,7 @@ export const FinishCleaningResponse = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 
@@ -373,6 +419,7 @@ export const GetTodayAssignmentsResponseItem = zod.object({
   checkoutStatus: zod
     .enum(["pending_checkout", "checkout_complete", "auto_closed"])
     .nullish(),
+  sortOrder: zod.number(),
   createdAt: zod.string(),
 });
 export const GetTodayAssignmentsResponse = zod.array(
