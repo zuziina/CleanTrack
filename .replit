@@ -78,3 +78,6 @@ R2_ENDPOINT = "https://3095c88c464c44c50917bc0247dcc020.r2.cloudflarestorage.com
 R2_ACCOUNT_ID = "3095c88c464c44c50917bc0247dcc020"
 
 [userenv.production]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-045c2b89-fa71-49ec-8d5b-150cad4c3841"
