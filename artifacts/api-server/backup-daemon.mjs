@@ -34,7 +34,7 @@ function runBackup() {
 async function runAll() {
   await runBackup();
 
-  console.log("[backup-daemon] Running issue-photo cleanup...");
+  console.log("[backup-daemon] Running photo cleanup...");
   try {
     await runCleanup();
   } catch (err) {

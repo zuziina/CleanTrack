@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * CleanTrack issue-photo cleanup
- * Deletes assignment_issue_photos rows (+ their GCS files) where expires_at <= NOW().
- * Also decrements issue_photo_count on the affected assignments.
+ * CleanTrack photo cleanup
+ * Deletes assignment_issue_photos and assignment_checkout_photos rows
+ * (+ their GCS files) where expires_at <= NOW().
+ * Also recounts issue_photo_count / checkout_photo_count on the affected assignments.
  */
 
 import pg from "pg";
@@ -55,6 +56,45 @@ async function deleteFromGCS(objectPath) {
   }
 }
 
+async function cleanupTable(pool, { table, countColumn, label }) {
+  const { rows: expired } = await pool.query(
+    `SELECT id, assignment_id, object_path FROM ${table} WHERE expires_at <= NOW()`
+  );
+
+  if (expired.length === 0) {
+    console.log(`[cleanup] No expired ${label} photos.`);
+    return;
+  }
+
+  console.log(`[cleanup] Found ${expired.length} expired ${label} photo(s).`);
+
+  const assignmentIds = new Set();
+  for (const row of expired) {
+    try {
+      await deleteFromGCS(row.object_path);
+      console.log(`[cleanup] Deleted GCS object for ${label} photo #${row.id}`);
+    } catch (err) {
+      console.warn(`[cleanup] GCS delete failed for ${label} photo #${row.id}: ${err.message}`);
+    }
+
+    await pool.query(`DELETE FROM ${table} WHERE id = $1`, [row.id]);
+    assignmentIds.add(row.assignment_id);
+  }
+
+  for (const aid of assignmentIds) {
+    const { rows: [{ count }] } = await pool.query(
+      `SELECT COUNT(*) AS count FROM ${table} WHERE assignment_id = $1`,
+      [aid]
+    );
+    await pool.query(
+      `UPDATE assignments SET ${countColumn} = $1 WHERE id = $2`,
+      [parseInt(count, 10), aid]
+    );
+  }
+
+  console.log(`[cleanup] Done with ${label} photos. Removed ${expired.length} photo(s) from ${assignmentIds.size} assignment(s).`);
+}
+
 export async function runCleanup() {
   if (!process.env.DATABASE_URL) {
     console.error("[cleanup] DATABASE_URL not set, skipping");
@@ -64,42 +104,17 @@ export async function runCleanup() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   try {
-    const { rows: expired } = await pool.query(
-      `SELECT id, assignment_id, object_path FROM assignment_issue_photos WHERE expires_at <= NOW()`
-    );
+    await cleanupTable(pool, {
+      table: "assignment_issue_photos",
+      countColumn: "issue_photo_count",
+      label: "issue",
+    });
 
-    if (expired.length === 0) {
-      console.log("[cleanup] No expired issue photos.");
-      return;
-    }
-
-    console.log(`[cleanup] Found ${expired.length} expired issue photo(s).`);
-
-    const assignmentIds = new Set();
-    for (const row of expired) {
-      try {
-        await deleteFromGCS(row.object_path);
-        console.log(`[cleanup] Deleted GCS object for photo #${row.id}`);
-      } catch (err) {
-        console.warn(`[cleanup] GCS delete failed for photo #${row.id}: ${err.message}`);
-      }
-
-      await pool.query(`DELETE FROM assignment_issue_photos WHERE id = $1`, [row.id]);
-      assignmentIds.add(row.assignment_id);
-    }
-
-    for (const aid of assignmentIds) {
-      const { rows: [{ count }] } = await pool.query(
-        `SELECT COUNT(*) AS count FROM assignment_issue_photos WHERE assignment_id = $1`,
-        [aid]
-      );
-      await pool.query(
-        `UPDATE assignments SET issue_photo_count = $1 WHERE id = $2`,
-        [parseInt(count, 10), aid]
-      );
-    }
-
-    console.log(`[cleanup] Done. Removed ${expired.length} photo(s) from ${assignmentIds.size} assignment(s).`);
+    await cleanupTable(pool, {
+      table: "assignment_checkout_photos",
+      countColumn: "checkout_photo_count",
+      label: "checkout",
+    });
   } finally {
     await pool.end();
   }
