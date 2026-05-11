@@ -242,32 +242,37 @@ router.patch("/:id/sort-order", requireAuthAndCompany, async (req: any, res) => 
       res.status(400).json({ error: "newPosition must be a positive integer" });
       return;
     }
-    const [target] = await db
-      .select()
-      .from(assignmentsTable)
-      .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)));
-    if (!target) { res.status(404).json({ error: "Assignment not found" }); return; }
-    const siblings = await db
-      .select()
-      .from(assignmentsTable)
-      .where(and(
-        eq(assignmentsTable.companyId, req.companyId),
-        eq(assignmentsTable.date, target.date),
-        eq(assignmentsTable.assignedToClerkId, target.assignedToClerkId ?? ""),
-      ))
-      .orderBy(asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
-    const others = siblings.filter((s) => s.id !== id);
-    const clampedPos = Math.min(newPosition - 1, others.length);
-    const reordered = [...others.slice(0, clampedPos), target, ...others.slice(clampedPos)];
-    await Promise.all(
-      reordered.map((a, idx) =>
-        db.update(assignmentsTable).set({ sortOrder: idx + 1 }).where(eq(assignmentsTable.id, a.id))
-      )
-    );
-    const [updated] = await db
-      .select()
-      .from(assignmentsTable)
-      .where(eq(assignmentsTable.id, id));
+    const updated = await db.transaction(async (tx) => {
+      const [target] = await tx
+        .select()
+        .from(assignmentsTable)
+        .where(and(eq(assignmentsTable.id, id), eq(assignmentsTable.companyId, req.companyId)));
+      if (!target) return null;
+      const siblings = await tx
+        .select()
+        .from(assignmentsTable)
+        .where(and(
+          eq(assignmentsTable.companyId, req.companyId),
+          eq(assignmentsTable.date, target.date),
+          eq(assignmentsTable.assignedToClerkId, target.assignedToClerkId ?? ""),
+        ))
+        .orderBy(asc(assignmentsTable.sortOrder), asc(assignmentsTable.timeSlot));
+      const others = siblings.filter((s) => s.id !== id);
+      const clampedPos = Math.min(newPosition - 1, others.length);
+      const reordered = [...others.slice(0, clampedPos), target, ...others.slice(clampedPos)];
+      for (let idx = 0; idx < reordered.length; idx++) {
+        await tx
+          .update(assignmentsTable)
+          .set({ sortOrder: idx + 1 })
+          .where(eq(assignmentsTable.id, reordered[idx].id));
+      }
+      const [row] = await tx
+        .select()
+        .from(assignmentsTable)
+        .where(eq(assignmentsTable.id, id));
+      return row ?? null;
+    });
+    if (!updated) { res.status(404).json({ error: "Assignment not found" }); return; }
     const [house] = await db.select().from(housesTable).where(eq(housesTable.id, updated.houseId));
     if (!house) { res.status(404).json({ error: "House not found" }); return; }
     const clerkIds = updated.assignedToClerkId ? [updated.assignedToClerkId] : [];

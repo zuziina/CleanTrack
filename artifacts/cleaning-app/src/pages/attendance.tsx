@@ -1,5 +1,6 @@
 import { Layout } from "@/components/layout";
 import { useGetMe, useListUsers } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -134,6 +135,11 @@ function useTodaySession(todayStr: string) {
   const [session, setSession] = useState<WorkSession | null | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
+
+  const invalidateLiveTeam = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["work-sessions", "live"] });
+  }, [queryClient]);
 
   const reload = useCallback(() => {
     setIsLoading(true);
@@ -153,11 +159,11 @@ function useTodaySession(todayStr: string) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ date: todayStr }),
       });
-      if (r.ok) { const d = await r.json(); setSession(d); }
+      if (r.ok) { const d = await r.json(); setSession(d); invalidateLiveTeam(); }
       else toast.error("Could not clock in");
     } catch { toast.error("Could not clock in"); }
     finally { setBusy(false); }
-  }, [todayStr]);
+  }, [todayStr, invalidateLiveTeam]);
 
   const clockOut = useCallback(async () => {
     setBusy(true);
@@ -167,11 +173,11 @@ function useTodaySession(todayStr: string) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ date: todayStr }),
       });
-      if (r.ok) { const d = await r.json(); setSession(d); }
+      if (r.ok) { const d = await r.json(); setSession(d); invalidateLiveTeam(); }
       else toast.error("Could not clock out");
     } catch { toast.error("Could not clock out"); }
     finally { setBusy(false); }
-  }, [todayStr]);
+  }, [todayStr, invalidateLiveTeam]);
 
   const undoClock = useCallback(async () => {
     setBusy(true);
@@ -179,11 +185,11 @@ function useTodaySession(todayStr: string) {
       const r = await fetch(`/api/work-sessions/today?date=${todayStr}`, {
         method: "DELETE", credentials: "include",
       });
-      if (r.ok) setSession(null);
+      if (r.ok) { setSession(null); invalidateLiveTeam(); }
       else toast.error("Could not reset");
     } catch { toast.error("Could not reset"); }
     finally { setBusy(false); }
-  }, [todayStr]);
+  }, [todayStr, invalidateLiveTeam]);
 
   return { session, isLoading, busy, clockIn, clockOut, undoClock, reload };
 }
